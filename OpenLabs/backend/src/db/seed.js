@@ -22,8 +22,11 @@ import crypto from "crypto";
 const seedData = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
-    console.log(`Connecting to MongoDB for seeding: ${mongoUri}/${DB_NAME}`);
-    await mongoose.connect(`${mongoUri}/${DB_NAME}`);
+    console.log(`Connecting to MongoDB Atlas for seeding database: ${DB_NAME}`);
+    await mongoose.connect(mongoUri, {
+      dbName: DB_NAME,
+      serverSelectionTimeoutMS: 15000,
+    });
     console.log("MongoDB connection established.");
 
     // Clean existing records
