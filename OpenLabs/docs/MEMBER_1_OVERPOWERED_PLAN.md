@@ -12,13 +12,18 @@
 As **Member 1**, you own the complete institutional engine that makes OpenLabs trusted, deterministic, and auditable. You are responsible for:
 
 1. **The 10-Step Deterministic State Machine:** Governing the complete lifecycle from resource listing to final return signoff.
-2. **Mathematical Anti-Monopolization Engine (Criterion #6 — 10 Pts):** Enforcing weekly hour caps, priority queue tiebreakers, and 30-minute calibration cooldown buffers.
-3. **Multimodal AI Intelligence (Criterion #7 — 10 Pts):**
+2. **Distributed Concurrency & Locking Engine (Criterion #4 — 15 Pts):**
+   - **Redis Distributed Locking (Atomic `SET NX EX`):** Eliminating double-booking race conditions during high-contention slot reservation.
+   - **Redis 5-Minute Atomic Holds (`TTL 300s`):** Automatic release of unconfirmed slots without cron overhead.
+   - **Redis Sorted Sets (`ZSET`):** Real-time $O(\log N)$ priority waitlisting for oversubscribed machinery.
+   - **Idempotency Key Protection:** Preventing double-submission on network jitter.
+3. **Mathematical Anti-Monopolization Engine (Criterion #6 — 10 Pts):** Enforcing weekly hour caps, priority queue tiebreakers, and 30-minute calibration cooldown buffers.
+4. **Multimodal AI Intelligence (Criterion #7 — 10 Pts):**
    - **TrustScan AI:** Automated OCR verification of training credentials against machine requirements.
    - **VisionGuard AI:** Dual-image comparative analysis highlighting damage with normalized bounding boxes $[ymin, xmin, ymax, xmax]$.
    - **DisputeSummary AI:** Objective arbitration briefs for lab managers.
-4. **Cryptographic Append-Only Audit Trail (Criterion #5 — 10 Pts):** Every state transition generates a SHA-256 digital fingerprint preventing retroactive tampering.
-5. **The Handshake Contract:** Exposing clean REST APIs under `/api/v1/*` so Member 2 has zero blockers.
+5. **Cryptographic Append-Only Audit Trail (Criterion #5 — 10 Pts):** Every state transition generates a SHA-256 digital fingerprint preventing retroactive tampering.
+6. **The Handshake Contract:** Exposing clean REST APIs under `/api/v1/*` so Member 2 has zero blockers.
 
 ---
 
@@ -357,6 +362,35 @@ In src/services/fairAllocationService.js, build FairAllocationService with stati
 4. getFairnessMetrics():
    - Aggregates rolling 30-day hours by department and checks against 40% parity ceiling.
 Proof of Work: Write an inline test asserting that booking 11 hours when cap=10 triggers isExceeded=true.
+```
+
+---
+
+### Part 1.8b: Redis Distributed Locking & Concurrency Control
+* **Target File:** `OpenLabs/backend/src/services/redisService.js`
+* **Skills Tag:** `[Skills: backend-architecture, security-hardening, tdd]`
+
+#### The Prompt:
+```text
+[Skills: backend-architecture, security-hardening, tdd]
+Context: Distributed Locking & Concurrency Control (Eliminating Double-Booking Race Conditions).
+Task:
+In src/services/redisService.js, implement RedisConcurrencyService with:
+1. acquireSlotLock(resourceId, slotKey, ttlSeconds = 10):
+   - Uses atomic SET lock:slot:{resourceId}:{slotKey} {requestId} NX EX {ttlSeconds}.
+   - Returns { acquired: boolean, lockToken: string }.
+   - If slot is already locked by another concurrent process, yields immediately with 409 Conflict / Waitlist redirect.
+2. releaseSlotLock(resourceId, slotKey, lockToken):
+   - Atomically releases the lock using Lua script verifying token ownership to prevent accidental release of expired locks.
+3. acquireTemporaryHold(resourceId, slotKey, userId, ttlSeconds = 300):
+   - Places a 5-minute temporary reservation hold (SET hold:slot:{resourceId}:{slotKey} {userId} NX EX 300).
+   - Automatically expires if user abandons the booking modal, releasing the slot with zero cron overhead.
+4. addToRealtimeWaitlist(resourceId, slotKey, userId, priorityScore):
+   - Uses Redis Sorted Set: ZADD waitlist:{resourceId}:{slotKey} {priorityScore} {userId}.
+   - Provides O(log N) immediate retrieval of highest-priority researcher via ZPOPMAX when a slot cancels.
+5. In-Memory Graceful Fallback:
+   - If Redis connection is offline, falls back seamlessly to an in-memory Map with atomic compare-and-swap, ensuring zero crashes during judge evaluation.
+Proof of Work: Run a concurrent booking test simulating 5 simultaneous requests for the exact same Haas CNC slot; assert that exactly 1 acquires the lock and 4 are safely queued onto the waitlist.
 ```
 
 ---

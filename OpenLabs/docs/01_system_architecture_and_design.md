@@ -31,6 +31,14 @@ flowchart TB
         StateEngine["10-Step State Machine Orchestrator"]
         QuotaEngine["Anti-Monopolization & Quota Engine"]
         AuditMid["Append-Only Audit Log Interceptor"]
+        LockEngine["Redis Distributed Lock & Hold Engine"]
+    end
+
+    subgraph Memory_Tier ["Fast In-Memory Tier (Redis 7 / In-Memory Mock)"]
+        Redis_Lock[("Atomic SETNX Distributed Locks")]
+        Redis_Hold[("5-Min Temporary Slot Holds (TTL)")]
+        Redis_Waitlist[("O(log N) Priority Queues (ZSET)")]
+        Redis_Idemp[("Idempotency Cache (24h TTL)")]
     end
 
     subgraph AI_Core ["Multimodal Intelligence (Gemini 2.5 Flash)"]
@@ -49,6 +57,7 @@ flowchart TB
 
     Users --> Client
     Client -->|REST / JSON + Multipart| Gateway
+    Gateway --> Memory_Tier
     Gateway --> AI_Core
     Gateway --> Data_Tier
 ```
