@@ -1,35 +1,68 @@
-import express from "express"; //express is a framework for building web applications and APIs
-import cors from "cors"; //cors is a middleware for enabling cross-origin resource sharing
-import cookieParser from "cookie-parser"; //cookie-parser is a middleware for parsing cookies from the request headers
-import compression from "compression";  //compression is a middleware that compresses http responses using algorithms such as gzip/Brotli depending on negotiation
-import helmet from "helmet";    //helmet is a middleware that sets various http headers
-import morgan from "morgan";    //morgan is a middleware that logs http requests to the console
+import express from "express";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import compression from "compression";
+import helmet from "helmet";
+import morgan from "morgan";
 
-const app=express();
+// Import Route Handlers
+import authRouter from "./routes/auth.routes.js";
+import resourceRouter from "./routes/resource.routes.js";
+import bookingRouter from "./routes/booking.routes.js";
+import auditRouter from "./routes/audit.routes.js";
+import analyticsRouter from "./routes/analytics.routes.js";
 
-//compress all responses (must be first)
+// Import Error Middleware
+import { errorHandler } from "./middlewares/error.middleware.js";
+
+const app = express();
+
+// 1. Response compression
 app.use(compression());
 
-//http security headers
-// also it wont manage corp policy
-app.use(helmet({crossOriginResourcePolicy:false}));
-
-app.use(morgan("dev")); //morgan is a middleware that logs http requests to the console
-
-
-//enable cors
-//frontend can make request from all origins and cookies can be sent to the server
+// 2. HTTP Security headers
 app.use(
-    cors({
-        origin:true,
-        credentials:true,
-    })
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
 );
 
+// 3. Request Logger
+app.use(morgan("dev"));
 
-app.use(express.json({limit:"16kb"}));  //this middleware parses incoming json helps in destructuring in req.body
-app.use(express.urlencoded({extended:true,limit:"16kb"}));  //this middleware parses incoming url encoded data  extended=true allows nested objects
+// 4. CORS configuration (permits frontend credentials & cross-origin cookies)
+app.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || true,
+    credentials: true,
+  })
+);
 
-app.use(cookieParser()); //this middleware parses incoming cookies from the browser stores them in req.cookies
+// 5. Body Parsers with 10MB limit for base64 photo inspection & certificate uploads
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// 6. Cookie Parser
+app.use(cookieParser());
+
+// 7. Health Check Route
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({
+    status: "healthy",
+    timestamp: new Date().toISOString(),
+    service: "OpenLabs Backend",
+    version: "1.0.0",
+  });
+});
+
+// 8. Mount Modular API Routes under /api/v1
+app.use("/api/v1/auth", authRouter);
+app.use("/api/v1/resources", resourceRouter);
+app.use("/api/v1/bookings", bookingRouter);
+app.use("/api/v1/audit", auditRouter);
+app.use("/api/v1/analytics", analyticsRouter);
+
+// 9. Centralized Error Handling Middleware (must be after all routes)
+app.use(errorHandler);
 
 export default app;

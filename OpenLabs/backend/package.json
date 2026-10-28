@@ -1,13 +1,15 @@
 {
-  "name": "Crap",
+  "name": "openlabs-backend",
   "version": "1.0.0",
-  "description": "Backend for CodeHack",
+  "description": "OpenLabs AI — Backend API & Multimodal Custody Engine for CodeHack",
   "license": "ISC",
   "author": "Prakhar",
   "type": "module",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/db/seed.js"
   },
   "devDependencies": {
     "compression": "^1.8.2",

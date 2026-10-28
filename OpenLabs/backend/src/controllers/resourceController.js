@@ -1,13 +1,36 @@
+import mongoose from "mongoose";
 import { Resource } from "../models/resource.model.js";
 import { Booking } from "../models/booking.model.js";
+import { memoryStore } from "../db/memoryStore.js";
 import { ApiError } from "../utils/apiError.js";
 import { APIResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { recordAuditLog } from "../utils/auditHelper.js";
 import { AUDIT_ACTIONS, RESOURCE_STATUS, BOOKING_STATUS } from "../constants.js";
 
+const isDbConnected = () => mongoose.connection.readyState === 1;
+
 export const getAllResources = asyncHandler(async (req, res) => {
   const { category, department, search, status } = req.query;
+
+  if (!isDbConnected()) {
+    let list = [...memoryStore.resources];
+    if (category) list = list.filter((r) => r.category === category);
+    if (department) list = list.filter((r) => r.department === department);
+    if (status) list = list.filter((r) => r.status === status);
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (r) =>
+          r.title.toLowerCase().includes(q) ||
+          r.description.toLowerCase().includes(q) ||
+          r.department.toLowerCase().includes(q)
+      );
+    }
+    return res.status(200).json(
+      new APIResponse(200, list, `Retrieved ${list.length} resources (In-Memory Tier).`)
+    );
+  }
 
   const filter = {};
   if (category) filter.category = category;
@@ -35,10 +58,20 @@ export const getAllResources = asyncHandler(async (req, res) => {
 export const getResourceById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  if (!isDbConnected()) {
+    const resource = memoryStore.resources.find((r) => r._id === id);
+    if (!resource) throw new ApiError(404, "Resource not found.");
+    const upcomingBookings = memoryStore.bookings.filter(
+      (b) => b.resource._id === id || b.resource === id
+    );
+    return res.status(200).json(
+      new APIResponse(200, { resource, upcomingBookings }, "Resource details retrieved (In-Memory Tier).")
+    );
+  }
+
   const resource = await Resource.findById(id).populate("owner", "name email department avatar");
   if (!resource) throw new ApiError(404, "Resource not found.");
 
-  // Get upcoming 7-day bookings for calendar view
   const upcomingBookings = await Booking.find({
     resource: id,
     status: { $in: [BOOKING_STATUS.APPROVED, BOOKING_STATUS.CHECKED_IN] },
@@ -71,7 +104,8 @@ export const createResource = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Title, category, description, department, and location are required.");
   }
 
-  const resource = await Resource.create({
+  const resourceData = {
+    _id: `res_${Date.now()}`,
     title,
     category,
     description,
@@ -86,7 +120,16 @@ export const createResource = asyncHandler(async (req, res) => {
     weeklyQuotaLimit,
     specs,
     status: RESOURCE_STATUS.AVAILABLE,
-  });
+  };
+
+  if (!isDbConnected()) {
+    memoryStore.resources.unshift(resourceData);
+    return res.status(201).json(
+      new APIResponse(201, resourceData, "Resource listing created successfully (In-Memory Tier).")
+    );
+  }
+
+  const resource = await Resource.create(resourceData);
 
   await recordAuditLog({
     resourceId: resource._id,
@@ -102,4 +145,3 @@ export const createResource = asyncHandler(async (req, res) => {
     new APIResponse(201, resource, "Resource listing created successfully.")
   );
 });
-
