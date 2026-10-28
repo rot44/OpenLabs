@@ -175,3 +175,4 @@ VERIFICATION PROOF-OF-WORK
 2. Verify all 4 tabs and 3 persona switches operate without layout shifts.
 3. Test that the interactive visual diff slider drags smoothly with bounding box overlays.
 ```
+
