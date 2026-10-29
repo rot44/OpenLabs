@@ -443,14 +443,41 @@ export function AppProvider({ children }) {
     return { success: true };
   }, [appendAuditLog]);
 
-  // Login with Google OAuth 2.0 Handshake Simulation
-  const loginWithGoogle = useCallback((personaKey = "alex") => {
-    const persona = PERSONAS[personaKey] || PERSONAS.alex;
-    const token = `google_oauth2_${persona.id}_${Date.now()}`;
+  // Login with Google Identity Services (GIS) Profile Payload
+  const loginWithGooglePayload = useCallback((profile) => {
+    const cleanEmail = (profile.email || "").trim().toLowerCase();
+
+    // Check if matches an existing institutional persona
+    const matchedKey = Object.keys(PERSONAS).find(
+      (k) => PERSONAS[k].email.toLowerCase() === cleanEmail
+    );
+
+    let activeKey = "alex";
+    let personaObj = PERSONAS.alex;
+
+    if (matchedKey) {
+      activeKey = matchedKey;
+      personaObj = PERSONAS[matchedKey];
+    } else {
+      // Provision user profile linked to verified Google account
+      activeKey = "alex";
+      personaObj = {
+        ...PERSONAS.alex,
+        name: profile.name || "University Google User",
+        email: cleanEmail || "user@openlabs.edu",
+        avatar: profile.picture || PERSONAS.alex.avatar,
+        id: `usr_google_${profile.sub?.slice(-8) || Math.floor(Math.random() * 90000)}`,
+        title: "Student / Researcher (Google SSO)",
+      };
+    }
+
+    const token = `google_oauth2_jwt_${profile.sub || Date.now()}`;
     const newSession = {
       token,
-      personaKey: persona.key,
-      email: persona.email,
+      personaKey: activeKey,
+      email: personaObj.email,
+      name: personaObj.name,
+      avatar: personaObj.avatar,
       authMethod: "google_oauth",
       authenticated: true,
       expiresAt: Date.now() + 86400000,
@@ -458,24 +485,35 @@ export function AppProvider({ children }) {
 
     localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
     setAuthSession(newSession);
-    setActivePersonaKey(persona.key);
+    setActivePersonaKey(activeKey);
     setIsAuthenticated(true);
     setAuthMethod("google_oauth");
     setIsAuthModalOpen(false);
 
     appendAuditLog(
-      "AUTH_GOOGLE_OAUTH",
-      "Google Workspace SSO",
-      `User ${persona.name} signed in via Google OAuth 2.0 handshake. Verified institutional domain @openlabs.edu.`,
-      persona.name,
-      persona.title
+      "AUTH_GOOGLE_GIS",
+      "Google Identity Services (OAuth 2.0)",
+      `User ${personaObj.name} (${personaObj.email}) authenticated via Google Identity Services. Sub: ${profile.sub || "N/A"}.`,
+      personaObj.name,
+      personaObj.title
     );
 
-    setBannerNotice(`Authenticated via Google Workspace SSO: ${persona.name}`);
+    setBannerNotice(`Authenticated via Google Workspace: ${personaObj.name}`);
     setTimeout(() => setBannerNotice(null), 3500);
 
     return { success: true };
   }, [appendAuditLog]);
+
+  // Login with Google OAuth 2.0 Handshake Simulation Fallback
+  const loginWithGoogle = useCallback((personaKey = "alex") => {
+    const persona = PERSONAS[personaKey] || PERSONAS.alex;
+    return loginWithGooglePayload({
+      email: persona.email,
+      name: persona.name,
+      picture: persona.avatar,
+      sub: `gid_${persona.id}`,
+    });
+  }, [loginWithGooglePayload]);
 
   // Logout & terminate workstation session
   const logout = useCallback(() => {
@@ -650,6 +688,7 @@ export function AppProvider({ children }) {
         closeAuthModal,
         loginWithEmail,
         loginWithGoogle,
+        loginWithGooglePayload,
         logout,
         resources,
         bookings,
