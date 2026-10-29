@@ -326,8 +326,51 @@ export function AppProvider({ children }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const [resources, setResources] = useState(INITIAL_RESOURCES);
-  const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
-  const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
+
+  // Initialize bookings ledger from localStorage with fallback to INITIAL_BOOKINGS
+  const [bookings, setBookings] = useState(() => {
+    try {
+      const stored = localStorage.getItem("openlabs_bookings_ledger");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn("Could not parse stored bookings ledger:", e);
+    }
+    return INITIAL_BOOKINGS;
+  });
+
+  // Initialize immutable audit trail from localStorage with fallback to INITIAL_AUDIT_LOGS
+  const [auditLogs, setAuditLogs] = useState(() => {
+    try {
+      const stored = localStorage.getItem("openlabs_audit_logs");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn("Could not parse stored audit logs:", e);
+    }
+    return INITIAL_AUDIT_LOGS;
+  });
+
+  // Sync bookings to localStorage on state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("openlabs_bookings_ledger", JSON.stringify(bookings));
+    } catch (e) {
+      console.warn("Failed to persist bookings to localStorage:", e);
+    }
+  }, [bookings]);
+
+  // Sync audit logs to localStorage on state changes
+  useEffect(() => {
+    try {
+      localStorage.setItem("openlabs_audit_logs", JSON.stringify(auditLogs));
+    } catch (e) {
+      console.warn("Failed to persist audit logs to localStorage:", e);
+    }
+  }, [auditLogs]);
+
   const [activeTab, setActiveTab] = useState("catalog"); // 'catalog' | 'custody' | 'manager' | 'audit'
   const [tourStep, setTourStep] = useState(0); // 0 = off, 1-7 = guided steps
   const [selectedResource, setSelectedResource] = useState(null);
@@ -546,6 +589,7 @@ export function AppProvider({ children }) {
       userName: activePersona.name,
       userRole: activePersona.role,
       userDepartment: activePersona.department,
+      userEmail: activePersona.email,
       purpose: details.purpose || "Capstone research fabrication and testing.",
       date: details.date || "Tomorrow, 14:00 - 17:00",
       durationHours: details.durationHours || 3,
@@ -561,7 +605,7 @@ export function AppProvider({ children }) {
     };
 
     setBookings((prev) => [newBooking, ...prev]);
-    appendAuditLog("SUBMIT_REQUEST", `Booking ${newBookingId} (${resource.title})`, `Requested 3-hour slot for ${details.purpose || 'research'}.`);
+    appendAuditLog("SUBMIT_REQUEST", `Booking ${newBookingId} (${resource.title})`, `Requested ${newBooking.durationHours}-hour slot for ${details.purpose || 'research'}.`);
     
     // Also log automated AI credential validation
     setTimeout(() => {
@@ -576,6 +620,16 @@ export function AppProvider({ children }) {
 
     return newBooking;
   }, [activePersona, appendAuditLog]);
+
+  // Reset ledger to baseline institutional fixtures
+  const resetLedger = useCallback(() => {
+    localStorage.removeItem("openlabs_bookings_ledger");
+    localStorage.removeItem("openlabs_audit_logs");
+    setBookings(INITIAL_BOOKINGS);
+    setAuditLogs(INITIAL_AUDIT_LOGS);
+    setBannerNotice("Institutional ledger reset to initial state.");
+    setTimeout(() => setBannerNotice(null), 3000);
+  }, []);
 
   // Approve booking (Dr. Elena Vance)
   const approveBooking = useCallback((bookingId) => {
@@ -712,6 +766,7 @@ export function AppProvider({ children }) {
         resolveIncident,
         bannerNotice,
         setBannerNotice,
+        resetLedger,
       }}
     >
       {children}
