@@ -32,7 +32,7 @@ export function CheckInModal({ booking, isOpen, onClose, onCheckInComplete }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/65 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl flex flex-col rounded-3xl bg-limestone border border-sandstone-border shadow-stone-xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-sandstone-border bg-limestone-light">

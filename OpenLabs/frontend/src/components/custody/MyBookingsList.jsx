@@ -29,38 +29,38 @@ export function MyBookingsList() {
     switch (status) {
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-cobalt/10 text-cobalt border border-cobalt/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-cobalt animate-pulse" />
             Approved • Ready for QR Check-In
           </span>
         );
       case "checked_in":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-950/80 text-blue-400 border border-blue-500/40">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-ping" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-weathered/60 text-earthInk border border-sandstone-border">
+            <span className="w-1.5 h-1.5 rounded-full bg-cobalt animate-ping" />
             In Active Custody
           </span>
         );
       case "disputed":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/80 text-amber-400 border border-amber-500/40">
-            <AlertTriangle className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rust/15 text-rust border border-rust/40">
+            <AlertTriangle className="w-3.5 h-3.5 text-rust" />
             Under Lab Director Review (Normal Wear)
           </span>
         );
       case "returned":
       case "completed":
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-300 border border-zinc-700">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-weathered/40 text-earthInk-muted border border-sandstone-border">
+            <CheckCircle2 className="w-3.5 h-3.5 text-cobalt" />
             Transaction Completed
           </span>
         );
       case "requested":
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-950/60 text-amber-300 border border-amber-600/40">
-            <Clock className="w-3.5 h-3.5" />
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-sandstone text-earthInk-muted border border-sandstone-border">
+            <Clock className="w-3.5 h-3.5 text-earthInk-faint" />
             Awaiting Director Approval
           </span>
         );
@@ -70,13 +70,13 @@ export function MyBookingsList() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-sandstone-border">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <KeyRound className="w-6 h-6 text-emerald-400" />
+          <h1 className="text-xl md:text-2xl font-extrabold text-earthInk tracking-tight flex items-center gap-2.5">
+            <KeyRound className="w-6 h-6 text-cobalt" />
             <span>My Equipment Custody & Reservation Ledger</span>
           </h1>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-xs text-earthInk-muted mt-1">
             Track equipment in your possession, initiate QR handoffs, and manage post-use AI return inspections.
           </p>
         </div>
@@ -91,51 +91,52 @@ export function MyBookingsList() {
           return (
             <div
               key={booking.id}
-              className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 rounded-2xl bg-surface border transition-all ${isCheckedIn
-                ? "border-blue-500/50 shadow-lg shadow-blue-950/20"
-                : isApproved
-                  ? "border-emerald-500/40 shadow-lg shadow-emerald-950/10"
-                  : "border-border"
-                }`}
+              className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 rounded-2xl bg-limestone border transition-all ${
+                isCheckedIn
+                  ? "border-cobalt/40 shadow-stone-md ring-1.5 ring-cobalt/30"
+                  : isApproved
+                  ? "border-cobalt/30 shadow-stone-sm ring-1 ring-cobalt/20"
+                  : "border-sandstone-border shadow-stone-sm"
+              }`}
             >
               {/* Left Column: Asset Info & Purpose */}
               <div className="space-y-2 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
-                  <h3 className="text-base font-bold text-white tracking-tight">
+                  <h3 className="text-base font-bold text-earthInk tracking-tight">
                     {booking.resourceTitle}
                   </h3>
                   {getStatusBadge(booking.status)}
                 </div>
 
-                <p className="text-xs text-zinc-300 leading-relaxed max-w-2xl">
-                  <strong>Research Purpose:</strong> {booking.purpose}
+                <p className="text-xs text-earthInk-muted leading-relaxed max-w-2xl">
+                  <strong className="text-earthInk font-semibold">Research Purpose:</strong> {booking.purpose}
                 </p>
 
-                <div className="flex flex-wrap items-center gap-4 text-xs text-zinc-400 pt-1">
-                  <span className="flex items-center gap-1 font-mono">
-                    <Clock className="w-3.5 h-3.5 text-zinc-500" />
+                <div className="flex flex-wrap items-center gap-4 text-xs text-earthInk-muted pt-1">
+                  <span className="flex items-center gap-1 font-mono text-earthInk-muted">
+                    <Clock className="w-3.5 h-3.5 text-earthInk-faint" />
                     {booking.date}
                   </span>
-                  <span>•</span>
-                  <span className="flex items-center gap-1 text-emerald-400">
+                  <span className="text-sandstone-darker">•</span>
+                  <span className="flex items-center gap-1 text-cobalt font-semibold">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     {booking.certName} (TrustScan Verified)
                   </span>
-                  <span>•</span>
-                  <span className="font-mono text-zinc-500">ID: {booking.id}</span>
+                  <span className="text-sandstone-darker">•</span>
+                  <span className="font-mono text-earthInk-faint">ID: {booking.id}</span>
                 </div>
               </div>
 
               {/* Middle Column: Live Countdown Timer if Checked In */}
               {isCheckedIn && (
-                <div className="flex flex-col items-start lg:items-center justify-center p-4 rounded-xl bg-blue-950/40 border border-blue-800/40">
-                  <span className="text-[10px] uppercase font-mono tracking-wider text-blue-300">
+                <div className="flex flex-col items-start lg:items-center justify-center p-4 rounded-xl bg-weathered/30 border border-sandstone-border shadow-inner">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-earthInk-faint font-bold">
                     Active Custody Remaining
                   </span>
-                  <span className="text-2xl font-extrabold font-mono text-white mt-0.5 tracking-tight">
+                  <span className="text-2xl font-extrabold font-mono text-earthInk mt-0.5 tracking-tight">
                     {formatTimer(activeTimerSeconds)}
                   </span>
-                  <span className="text-[10px] text-blue-400/80 mt-1">
+                  <span className="text-[10px] text-earthInk-muted mt-1 font-medium">
                     Turnaround buffer begins automatically at 00:00
                   </span>
                 </div>
@@ -147,7 +148,7 @@ export function MyBookingsList() {
                   <button
                     id={`btn-open-checkin-${booking.id}`}
                     onClick={() => setCheckInTarget(booking)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-zinc-950 bg-emerald-400 hover:bg-emerald-300 transition-all shadow-md shadow-emerald-950/20"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-cobalt hover:bg-cobalt-hover transition-all shadow-md shadow-cobalt/25 cursor-pointer"
                   >
                     <QrCode className="w-4 h-4" />
                     <span>Check In with QR & Baseline</span>
@@ -158,7 +159,7 @@ export function MyBookingsList() {
                   <button
                     id={`btn-open-return-${booking.id}`}
                     onClick={() => setReturnTarget(booking)}
-                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 transition-all shadow-md shadow-blue-950/30"
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-white bg-cobalt hover:bg-cobalt-hover transition-all shadow-md shadow-cobalt/25 cursor-pointer"
                   >
                     <Sliders className="w-4 h-4" />
                     <span>Initiate Return & AI Diff</span>
@@ -168,7 +169,7 @@ export function MyBookingsList() {
                 {booking.status === "disputed" && (
                   <button
                     onClick={() => setReturnTarget(booking)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-amber-300 bg-amber-950/60 border border-amber-500/40 hover:bg-amber-900/60 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-rust hover:bg-rust-hover transition-colors shadow-md shadow-rust/25 cursor-pointer"
                   >
                     <Sliders className="w-4 h-4" />
                     <span>Inspect VisionGuard Diff</span>

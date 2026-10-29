@@ -4,7 +4,7 @@ import { OpenLabsLogo } from "./OpenLabsLogo";
 import { Zap } from "lucide-react";
 
 export function JudgeBar({ onStartTour }) {
-  const { activePersonaKey, switchPersona, tourStep } = useApp();
+  const { activePersonaKey, switchPersona, tourStep, openAuthModal } = useApp();
 
   return (
     <div className="sticky top-0 z-50 w-full border-b border-sandstone-border bg-limestone/92 backdrop-blur-md px-4 py-2.5 transition-all shadow-stone-sm">
@@ -67,8 +67,16 @@ export function JudgeBar({ onStartTour }) {
           </button>
         </div>
 
-        {/* Right: 1-Click Guided Tour CTA */}
+        {/* Right: SSO Login & 1-Click Guided Tour CTA */}
         <div className="flex items-center gap-2">
+          <button
+            id="btn-judge-open-sso"
+            onClick={openAuthModal}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-earthInk bg-sandstone hover:bg-sandstone-dark border border-sandstone-border transition-all cursor-pointer shadow-inner"
+          >
+            <span>🔐 SSO Login</span>
+          </button>
+
           <button
             id="btn-guided-tour"
             onClick={onStartTour}

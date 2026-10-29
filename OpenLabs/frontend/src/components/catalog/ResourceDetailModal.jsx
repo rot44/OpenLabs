@@ -8,7 +8,7 @@ export function ResourceDetailModal({ resource, isOpen, onClose, onBookWithSlot 
   if (!isOpen || !resource) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/50 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/65 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl bg-limestone border border-sandstone-border shadow-stone-xl overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-center justify-between p-5 border-b border-sandstone-border bg-limestone-light">
@@ -105,7 +105,7 @@ export function ResourceDetailModal({ resource, isOpen, onClose, onBookWithSlot 
             {selectedSlot ? (
               <span>Ready to book for: <strong className="text-cobalt">{selectedSlot.dateString}</strong></span>
             ) : (
-              <span>Please select an available green slot above to proceed.</span>
+              <span>Please select an open slot on the schedule above to proceed.</span>
             )}
           </div>
           <div className="flex items-center gap-3">

@@ -45,7 +45,7 @@ export function ReturnAndInspectModal({ booking, isOpen, onClose, onReturnComple
       onTouchMove={handlePointerMove}
       onMouseUp={handlePointerUp}
       onTouchEnd={handlePointerUp}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/50 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-earthInk/65 backdrop-blur-md animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-3xl flex flex-col rounded-3xl bg-limestone border border-sandstone-border shadow-stone-xl overflow-hidden">
         {/* Modal Header */}

@@ -7,9 +7,12 @@ export const PERSONAS = {
     id: "usr_alex_chen",
     key: "alex",
     name: "Alex Chen",
+    email: "alex.chen@openlabs.edu",
+    password: "student123",
     role: "requester",
     title: "Student / Researcher",
     department: "Mechanical & Aerospace Engineering",
+    institutionalId: "STU-882910",
     reputationScore: 0.94,
     weeklyHoursUsed: 6,
     maxWeeklyHours: 10,
@@ -23,9 +26,12 @@ export const PERSONAS = {
     id: "usr_elena_vance",
     key: "elena",
     name: "Dr. Elena Vance",
+    email: "elena.vance@openlabs.edu",
+    password: "director123",
     role: "owner",
     title: "Lab Director / Equipment Owner",
     department: "Advanced Manufacturing & Bio-Engineering",
+    institutionalId: "FAC-100482",
     reputationScore: 0.99,
     weeklyHoursUsed: 2,
     maxWeeklyHours: 20,
@@ -39,9 +45,12 @@ export const PERSONAS = {
     id: "usr_marcus_thorne",
     key: "marcus",
     name: "Marcus Thorne",
+    email: "marcus.thorne@openlabs.edu",
+    password: "admin123",
     role: "admin",
     title: "Campus Safety Admin / Auditor",
     department: "Institutional Safety & Risk Management",
+    institutionalId: "ADM-009142",
     reputationScore: 1.0,
     weeklyHoursUsed: 0,
     maxWeeklyHours: 0,
@@ -285,7 +294,37 @@ export const INITIAL_AUDIT_LOGS = [
 ];
 
 export function AppProvider({ children }) {
-  const [activePersonaKey, setActivePersonaKey] = useState("alex");
+  // Read session from localStorage if exists
+  const [authSession, setAuthSession] = useState(() => {
+    try {
+      const stored = localStorage.getItem("openlabs_auth_session");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.personaKey && PERSONAS[parsed.personaKey]) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn("Stored session parsing error", e);
+    }
+    return {
+      token: "openlabs_jwt_usr_alex_chen_init",
+      personaKey: "alex",
+      authMethod: "email",
+      authenticated: true,
+      email: "alex.chen@openlabs.edu",
+    };
+  });
+
+  const [activePersonaKey, setActivePersonaKey] = useState(
+    authSession?.personaKey || "alex"
+  );
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    authSession?.authenticated !== false
+  );
+  const [authMethod, setAuthMethod] = useState(authSession?.authMethod || "email");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
   const [resources, setResources] = useState(INITIAL_RESOURCES);
   const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
   const [auditLogs, setAuditLogs] = useState(INITIAL_AUDIT_LOGS);
@@ -297,7 +336,10 @@ export function AppProvider({ children }) {
   const [returnModalBooking, setReturnModalBooking] = useState(null);
   const [bannerNotice, setBannerNotice] = useState(null);
 
-  const activePersona = PERSONAS[activePersonaKey];
+  const activePersona = PERSONAS[activePersonaKey] || PERSONAS.alex;
+
+  const openAuthModal = useCallback(() => setIsAuthModalOpen(true), []);
+  const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), []);
 
   // Helper to append tamper-evident SHA-256 hash log
   const appendAuditLog = useCallback((action, target, details, customActor = null, customRole = null) => {
@@ -315,12 +357,23 @@ export function AppProvider({ children }) {
     setAuditLogs((prev) => [newEntry, ...prev]);
   }, [activePersona]);
 
-  // Switch persona handler
+  // Switch persona handler (synchronizes active persona & session)
   const switchPersona = useCallback((key) => {
     if (PERSONAS[key]) {
       setActivePersonaKey(key);
       const persona = PERSONAS[key];
-      // Adapt active tab to user's main responsibility if desired
+      const newSession = {
+        token: `openlabs_jwt_${persona.id}_${Date.now()}`,
+        personaKey: key,
+        email: persona.email,
+        authMethod: "email",
+        authenticated: true,
+        expiresAt: Date.now() + 86400000,
+      };
+      localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
+      setAuthSession(newSession);
+      setIsAuthenticated(true);
+
       if (persona.role === "owner" && activeTab === "catalog") {
         setActiveTab("manager");
       } else if (persona.role === "admin" && activeTab === "catalog") {
@@ -330,6 +383,118 @@ export function AppProvider({ children }) {
       setTimeout(() => setBannerNotice(null), 3000);
     }
   }, [activeTab]);
+
+  // Login with institutional email & password
+  const loginWithEmail = useCallback((email, password, remember = true) => {
+    const cleanEmail = email.trim().toLowerCase();
+    const matchedKey = Object.keys(PERSONAS).find(
+      (k) => PERSONAS[k].email.toLowerCase() === cleanEmail
+    );
+
+    if (!matchedKey) {
+      return {
+        success: false,
+        error: "Unrecognized institutional email. Account must be registered under @openlabs.edu.",
+      };
+    }
+
+    const persona = PERSONAS[matchedKey];
+    if (persona.password !== password) {
+      return {
+        success: false,
+        error: "Invalid password for this institutional account. Please verify credentials.",
+      };
+    }
+
+    const token = `openlabs_jwt_${persona.id}_${Date.now()}`;
+    const newSession = {
+      token,
+      personaKey: matchedKey,
+      email: persona.email,
+      authMethod: "email",
+      authenticated: true,
+      expiresAt: Date.now() + 86400000,
+    };
+
+    if (remember) {
+      localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
+    } else {
+      sessionStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
+      localStorage.removeItem("openlabs_auth_session");
+    }
+
+    setAuthSession(newSession);
+    setActivePersonaKey(matchedKey);
+    setIsAuthenticated(true);
+    setAuthMethod("email");
+    setIsAuthModalOpen(false);
+
+    appendAuditLog(
+      "AUTH_LOGIN_SUCCESS",
+      "Campus SSO Identity Provider",
+      `User ${persona.name} (${persona.email}) logged in via institutional password authentication.`,
+      persona.name,
+      persona.title
+    );
+
+    setBannerNotice(`Welcome back, ${persona.name} (${persona.title})`);
+    setTimeout(() => setBannerNotice(null), 3500);
+
+    return { success: true };
+  }, [appendAuditLog]);
+
+  // Login with Google OAuth 2.0 Handshake Simulation
+  const loginWithGoogle = useCallback((personaKey = "alex") => {
+    const persona = PERSONAS[personaKey] || PERSONAS.alex;
+    const token = `google_oauth2_${persona.id}_${Date.now()}`;
+    const newSession = {
+      token,
+      personaKey: persona.key,
+      email: persona.email,
+      authMethod: "google_oauth",
+      authenticated: true,
+      expiresAt: Date.now() + 86400000,
+    };
+
+    localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
+    setAuthSession(newSession);
+    setActivePersonaKey(persona.key);
+    setIsAuthenticated(true);
+    setAuthMethod("google_oauth");
+    setIsAuthModalOpen(false);
+
+    appendAuditLog(
+      "AUTH_GOOGLE_OAUTH",
+      "Google Workspace SSO",
+      `User ${persona.name} signed in via Google OAuth 2.0 handshake. Verified institutional domain @openlabs.edu.`,
+      persona.name,
+      persona.title
+    );
+
+    setBannerNotice(`Authenticated via Google Workspace SSO: ${persona.name}`);
+    setTimeout(() => setBannerNotice(null), 3500);
+
+    return { success: true };
+  }, [appendAuditLog]);
+
+  // Logout & terminate workstation session
+  const logout = useCallback(() => {
+    localStorage.removeItem("openlabs_auth_session");
+    sessionStorage.removeItem("openlabs_auth_session");
+    setAuthSession(null);
+    setIsAuthenticated(false);
+
+    appendAuditLog(
+      "AUTH_LOGOUT",
+      "Session Termination",
+      `User ${activePersona.name} logged out. Active workstation token invalidated.`,
+      activePersona.name,
+      activePersona.title
+    );
+
+    setBannerNotice("Signed out of OpenLabs institutional session.");
+    setTimeout(() => setBannerNotice(null), 3000);
+  }, [activePersona, appendAuditLog]);
 
   // Submit booking request
   const submitBooking = useCallback((resource, details) => {
@@ -477,6 +642,15 @@ export function AppProvider({ children }) {
         activePersonaKey,
         activePersona,
         switchPersona,
+        authSession,
+        isAuthenticated,
+        authMethod,
+        isAuthModalOpen,
+        openAuthModal,
+        closeAuthModal,
+        loginWithEmail,
+        loginWithGoogle,
+        logout,
         resources,
         bookings,
         auditLogs,

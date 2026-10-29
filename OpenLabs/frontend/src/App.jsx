@@ -9,6 +9,7 @@ import { ManagerDashboard } from "./components/dashboard/ManagerDashboard";
 import { AuditAndFairnessView } from "./components/audit/AuditAndFairnessView";
 import { CheckInModal } from "./components/custody/CheckInModal";
 import { ReturnAndInspectModal } from "./components/custody/ReturnAndInspectModal";
+import { AuthModal } from "./components/auth/AuthModal";
 import { Sparkles, ChevronRight, X, Play, RotateCcw } from "lucide-react";
 
 function MainContent() {
@@ -217,6 +218,9 @@ function MainContent() {
           setTourDiffBooking(null);
         }}
       />
+
+      {/* Institutional SSO & Auth Modal */}
+      <AuthModal />
 
       {/* Global Footer */}
       <footer className="border-t border-sandstone-border bg-limestone/60 px-4 py-6 text-center text-xs text-earthInk-muted">
