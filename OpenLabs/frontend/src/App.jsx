@@ -5,10 +5,11 @@ import { ResourceCatalog } from "./components/catalog/ResourceCatalog";
 import { MyBookingsList } from "./components/custody/MyBookingsList";
 import { ManagerDashboard } from "./components/dashboard/ManagerDashboard";
 import { AuditAndFairnessView } from "./components/audit/AuditAndFairnessView";
+import { InstitutionalAccessGate } from "./components/common/InstitutionalAccessGate";
 import { AuthModal } from "./components/auth/AuthModal";
 
 function MainContent() {
-  const { activeTab, bannerNotice } = useApp();
+  const { activeTab, bannerNotice, isAuthenticated, activePersona } = useApp();
 
   return (
     <div className="min-h-screen bg-sandstone text-earthInk flex flex-col font-sans">
@@ -22,12 +23,49 @@ function MainContent() {
         </div>
       )}
 
-      {/* Main Tab Router View */}
+      {/* Main Tab Router View with RBAC Clearance Enforcement */}
       <main className="flex-1 pb-16">
         {activeTab === "catalog" && <ResourceCatalog />}
-        {activeTab === "custody" && <MyBookingsList />}
-        {activeTab === "manager" && <ManagerDashboard />}
-        {activeTab === "audit" && <AuditAndFairnessView />}
+
+        {activeTab === "custody" &&
+          (!isAuthenticated ? (
+            <InstitutionalAccessGate
+              type="auth_required"
+              tabName="My Custody & Active Bookings"
+            />
+          ) : (
+            <MyBookingsList />
+          ))}
+
+        {activeTab === "manager" &&
+          (!isAuthenticated ? (
+            <InstitutionalAccessGate
+              type="auth_required"
+              tabName="Lab Director Control Center"
+            />
+          ) : activePersona.role === "requester" ? (
+            <InstitutionalAccessGate
+              type="faculty_required"
+              tabName="Lab Director Hub"
+            />
+          ) : (
+            <ManagerDashboard />
+          ))}
+
+        {activeTab === "audit" &&
+          (!isAuthenticated ? (
+            <InstitutionalAccessGate
+              type="auth_required"
+              tabName="Campus Safety & Fairness Ledger"
+            />
+          ) : activePersona.role === "requester" ? (
+            <InstitutionalAccessGate
+              type="admin_required"
+              tabName="Audit & Fairness Ledger"
+            />
+          ) : (
+            <AuditAndFairnessView />
+          ))}
       </main>
 
       {/* Institutional SSO & Auth Modal */}

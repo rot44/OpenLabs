@@ -308,10 +308,17 @@ export function AuthModal() {
             </button>
           </form>
 
-          {/* Help Notice */}
-          <div className="flex items-center gap-2 p-3 rounded-2xl bg-sandstone/30 border border-sandstone-border text-[11px] text-earthInk-muted">
-            <HelpCircle className="w-3.5 h-3.5 text-cobalt shrink-0" />
-            <span>Need an institutional account? Contact your departmental lab coordinator.</span>
+          {/* Institutional Credentials Reference for Manual Entry */}
+          <div className="p-3.5 rounded-2xl bg-sandstone/40 border border-sandstone-border space-y-2 text-[11px] text-earthInk-muted">
+            <div className="flex items-center gap-1.5 font-semibold text-earthInk">
+              <HelpCircle className="w-3.5 h-3.5 text-cobalt shrink-0" />
+              <span>Campus Directory Test Credentials (Manual Entry Only)</span>
+            </div>
+            <div className="grid grid-cols-1 gap-1 font-mono text-[10px] text-earthInk-faint pl-5">
+              <div>• Student: <span className="text-earthInk font-semibold">alex.chen@openlabs.edu</span> / <span className="text-cobalt">student123</span></div>
+              <div>• Lab Director: <span className="text-earthInk font-semibold">elena.vance@openlabs.edu</span> / <span className="text-cobalt">director123</span></div>
+              <div>• Safety Auditor: <span className="text-earthInk font-semibold">marcus.thorne@openlabs.edu</span> / <span className="text-cobalt">admin123</span></div>
+            </div>
           </div>
         </div>
 

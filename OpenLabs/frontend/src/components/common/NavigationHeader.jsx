@@ -14,7 +14,8 @@ import {
   Clock,
   LogIn,
   Building,
-  GraduationCap
+  GraduationCap,
+  Lock
 } from "lucide-react";
 
 export function NavigationHeader() {
@@ -45,19 +46,30 @@ export function NavigationHeader() {
   const tabs = [
     { id: "catalog", label: "Explore Catalog", icon: Compass },
     { id: "custody", label: "My Custody & Bookings", icon: KeyRound },
-    {
-      id: "manager",
-      label: "Lab Director Hub",
-      icon: LayoutDashboard,
-      badge: activePersonaKey === "elena" ? "Director Mode" : null,
-    },
-    {
-      id: "audit",
-      label: "Audit & Fairness Ledger",
-      icon: History,
-      badge: activePersonaKey === "marcus" ? "Admin Mode" : null,
-    },
+    { id: "manager", label: "Lab Director Hub", icon: LayoutDashboard },
+    { id: "audit", label: "Audit & Fairness Ledger", icon: History },
   ];
+
+  const getTabAccess = (tabId) => {
+    if (tabId === "catalog") return { label: null, locked: false };
+    if (!isAuthenticated) {
+      return { label: "SSO Req.", locked: true };
+    }
+    if (activePersona.role === "requester") {
+      if (tabId === "manager") return { label: "FAC Req.", locked: true };
+      if (tabId === "audit") return { label: "ADM Req.", locked: true };
+      return { label: null, locked: false };
+    }
+    if (activePersona.role === "owner") {
+      if (tabId === "manager") return { label: "Director", locked: false, isPrimary: true };
+      return { label: null, locked: false };
+    }
+    if (activePersona.role === "admin") {
+      if (tabId === "audit") return { label: "Auditor", locked: false, isPrimary: true };
+      return { label: null, locked: false };
+    }
+    return { label: null, locked: false };
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-sandstone-border bg-limestone/95 backdrop-blur-md px-4 py-3 shadow-stone-sm transition-all">
@@ -71,11 +83,13 @@ export function NavigationHeader() {
           </div>
         </div>
 
-        {/* Center: Main Navigation Tabs */}
+        {/* Center: Main Navigation Tabs with RBAC Indicators */}
         <nav className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0" aria-label="Main Navigation">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
+            const access = getTabAccess(tab.id);
+
             return (
               <button
                 key={tab.id}
@@ -89,13 +103,18 @@ export function NavigationHeader() {
               >
                 <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-earthInk-muted"}`} />
                 <span>{tab.label}</span>
-                {tab.badge && (
+                {access.label && (
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      isActive ? "bg-white/20 text-white" : "bg-rust/15 text-rust border border-rust/30"
+                    className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      isActive
+                        ? "bg-white/20 text-white"
+                        : access.locked
+                        ? "bg-rust/15 text-rust border border-rust/30"
+                        : "bg-cobalt/15 text-cobalt border border-cobalt/25"
                     }`}
                   >
-                    {tab.badge}
+                    {access.locked && <Lock className="w-2.5 h-2.5" />}
+                    <span>{access.label}</span>
                   </span>
                 )}
               </button>

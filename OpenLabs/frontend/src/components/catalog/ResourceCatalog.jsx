@@ -6,7 +6,7 @@ import { BookingModal } from "./BookingModal";
 import { Search, Sparkles, CheckCircle2 } from "lucide-react";
 
 export function ResourceCatalog() {
-  const { resources } = useApp();
+  const { resources, isAuthenticated, openAuthModal } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [detailResource, setDetailResource] = useState(null);
@@ -44,6 +44,11 @@ export function ResourceCatalog() {
   });
 
   const handleStartBooking = (resource, slot = null) => {
+    if (!isAuthenticated) {
+      setToastMessage("Institutional Authentication Required: Please sign in to reserve equipment.");
+      openAuthModal();
+      return;
+    }
     setBookingResource(resource);
     setSelectedSlot(slot);
     setDetailResource(null);
