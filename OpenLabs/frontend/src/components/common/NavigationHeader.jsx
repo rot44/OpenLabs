@@ -26,8 +26,12 @@ export function NavigationHeader() {
     activePersonaKey,
     openAuthModal,
     isAuthenticated,
+    authSession,
+    switchPersona,
     logout,
   } = useApp();
+
+  const isPendingClearance = authSession?.status === "pending_clearance";
 
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -257,6 +261,94 @@ export function NavigationHeader() {
                     >
                       <LogOut className="w-4 h-4 text-rust" />
                       <span>Sign Out</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : isPendingClearance ? (
+            <div>
+              {/* Trigger Button for Pending Clearance */}
+              <button
+                id="btn-user-pending-clearance"
+                onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl bg-rust/10 border border-rust/35 hover:border-rust shadow-stone-sm transition-all cursor-pointer group"
+              >
+                <div className="w-8 h-8 rounded-full bg-rust/20 border border-rust/30 flex items-center justify-center font-bold text-xs text-rust">
+                  {authSession.name ? authSession.name.charAt(0) : "P"}
+                </div>
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-earthInk truncate max-w-[100px]">
+                      {authSession.name || "Applicant"}
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-rust/20 text-rust font-bold animate-pulse">
+                      Pending
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-earthInk-muted truncate max-w-[120px]">
+                    {authSession.email}
+                  </span>
+                </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-rust transition-transform duration-200 ${
+                    isProfileDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {/* Pending Clearance Dropdown */}
+              {isProfileDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-80 rounded-3xl bg-limestone border border-sandstone-border shadow-2xl p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-150 z-50">
+                  <div className="flex items-start gap-3 pb-3 border-b border-sandstone-border">
+                    <div className="w-11 h-11 rounded-2xl bg-rust/10 border border-rust/30 flex items-center justify-center font-bold text-sm text-rust shrink-0">
+                      {authSession.name ? authSession.name.charAt(0) : "P"}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <h4 className="text-sm font-bold text-earthInk truncate">{authSession.name}</h4>
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-rust/15 text-rust">
+                          Review Queue
+                        </span>
+                      </div>
+                      <p className="text-xs text-earthInk-muted truncate">{authSession.email}</p>
+                      <div className="mt-1 text-[11px] font-mono text-rust font-semibold">
+                        Awaiting Dr. Elena Vance
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-sandstone/40 border border-sandstone-border text-xs text-earthInk-muted space-y-1">
+                    <p className="font-semibold text-earthInk">Campus Access Pending</p>
+                    <p className="text-[11px] leading-relaxed">
+                      Your identity was verified via {authSession.authMethod === "google_oauth" ? "Google Workspace SSO" : "Institutional SSO"}. Dr. Elena Vance must assign your lab role and machinery quota before reservation permissions unlock.
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-sandstone-border space-y-1.5">
+                    <button
+                      id="btn-dropdown-switch-to-elena"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        switchPersona("elena");
+                        setActiveTab("manager");
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-cobalt hover:bg-cobalt/10 transition-colors cursor-pointer text-left"
+                    >
+                      <LayoutDashboard className="w-4 h-4 text-cobalt" />
+                      <span>Review as Dr. Elena Vance &rarr;</span>
+                    </button>
+
+                    <button
+                      id="btn-dropdown-pending-signout"
+                      onClick={() => {
+                        setIsProfileDropdownOpen(false);
+                        logout();
+                      }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rust hover:bg-rust/10 transition-colors cursor-pointer text-left"
+                    >
+                      <LogOut className="w-4 h-4 text-rust" />
+                      <span>Cancel & Sign Out</span>
                     </button>
                   </div>
                 </div>

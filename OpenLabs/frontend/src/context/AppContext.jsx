@@ -293,14 +293,85 @@ export const INITIAL_AUDIT_LOGS = [
   },
 ];
 
+export const INITIAL_ONBOARDING_REQUESTS = [
+  {
+    id: "req-onb-freny-patel",
+    name: "Freny Patel",
+    email: "frenypatel2007@gmail.com",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+    authMethod: "google_oauth",
+    requestedAt: "Today, 10:45 AM",
+    status: "pending", // 'pending' | 'approved' | 'rejected'
+    suggestedRole: "requester",
+    proposedDepartment: "Mechanical & Aerospace Engineering",
+    notes: "OAuth identity verified via Google Identity Services. Awaiting Lab Director role clearance.",
+  },
+  {
+    id: "req-onb-jordan-hayes",
+    name: "Jordan Hayes",
+    email: "jordan.hayes@openlabs.edu",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80",
+    authMethod: "campus_sso",
+    requestedAt: "Today, 09:30 AM",
+    status: "pending",
+    suggestedRole: "requester",
+    proposedDepartment: "Biomedical Engineering",
+    notes: "Graduate research fellow applying for Confocal Microscope core facility access.",
+  },
+];
+
 export function AppProvider({ children }) {
+  // Registered personas state backed by localStorage (defaults to PERSONAS)
+  const [registeredPersonas, setRegisteredPersonas] = useState(() => {
+    try {
+      const stored = localStorage.getItem("openlabs_registered_personas");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn("Could not parse stored personas:", e);
+    }
+    return PERSONAS;
+  });
+
+  // Sync registered personas to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("openlabs_registered_personas", JSON.stringify(registeredPersonas));
+    } catch (e) {
+      console.warn("Failed to persist registered personas:", e);
+    }
+  }, [registeredPersonas]);
+
+  // Onboarding & role clearance requests queue for Dr. Elena Vance
+  const [onboardingRequests, setOnboardingRequests] = useState(() => {
+    try {
+      const stored = localStorage.getItem("openlabs_onboarding_requests");
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.warn("Could not parse stored onboarding requests:", e);
+    }
+    return INITIAL_ONBOARDING_REQUESTS;
+  });
+
+  // Sync onboarding requests to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("openlabs_onboarding_requests", JSON.stringify(onboardingRequests));
+    } catch (e) {
+      console.warn("Failed to persist onboarding requests:", e);
+    }
+  }, [onboardingRequests]);
+
   // Read session from localStorage if exists
   const [authSession, setAuthSession] = useState(() => {
     try {
       const stored = localStorage.getItem("openlabs_auth_session");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && parsed.personaKey && PERSONAS[parsed.personaKey]) {
+        if (parsed) {
           return parsed;
         }
       }
@@ -312,6 +383,7 @@ export function AppProvider({ children }) {
       personaKey: "alex",
       authMethod: "email",
       authenticated: true,
+      status: "active",
       email: "alex.chen@openlabs.edu",
     };
   });
@@ -320,7 +392,7 @@ export function AppProvider({ children }) {
     authSession?.personaKey || "alex"
   );
   const [isAuthenticated, setIsAuthenticated] = useState(
-    authSession?.authenticated !== false
+    authSession?.authenticated === true
   );
   const [authMethod, setAuthMethod] = useState(authSession?.authMethod || "email");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -379,7 +451,10 @@ export function AppProvider({ children }) {
   const [returnModalBooking, setReturnModalBooking] = useState(null);
   const [bannerNotice, setBannerNotice] = useState(null);
 
-  const activePersona = PERSONAS[activePersonaKey] || PERSONAS.alex;
+  const activePersona =
+    registeredPersonas[activePersonaKey] ||
+    PERSONAS[activePersonaKey] ||
+    PERSONAS.alex;
 
   const openAuthModal = useCallback(() => setIsAuthModalOpen(true), []);
   const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), []);
@@ -402,15 +477,18 @@ export function AppProvider({ children }) {
 
   // Switch persona handler (synchronizes active persona & session)
   const switchPersona = useCallback((key) => {
-    if (PERSONAS[key]) {
+    const persona = registeredPersonas[key] || PERSONAS[key];
+    if (persona) {
       setActivePersonaKey(key);
-      const persona = PERSONAS[key];
       const newSession = {
         token: `openlabs_jwt_${persona.id}_${Date.now()}`,
         personaKey: key,
         email: persona.email,
+        name: persona.name,
+        avatar: persona.avatar,
         authMethod: "email",
         authenticated: true,
+        status: "active",
         expiresAt: Date.now() + 86400000,
       };
       localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
@@ -425,24 +503,25 @@ export function AppProvider({ children }) {
       setBannerNotice(`Switched persona to ${persona.name} (${persona.title})`);
       setTimeout(() => setBannerNotice(null), 3000);
     }
-  }, [activeTab]);
+  }, [activeTab, registeredPersonas]);
 
   // Login with institutional email & password
   const loginWithEmail = useCallback((email, password, remember = true) => {
     const cleanEmail = email.trim().toLowerCase();
-    const matchedKey = Object.keys(PERSONAS).find(
-      (k) => PERSONAS[k].email.toLowerCase() === cleanEmail
+    const matchedKey = Object.keys(registeredPersonas).find(
+      (k) => registeredPersonas[k].email?.toLowerCase() === cleanEmail
     );
 
     if (!matchedKey) {
       return {
         success: false,
-        error: "Unrecognized institutional email. Account must be registered under @openlabs.edu.",
+        error: "Unregistered institutional email. Account is not yet recognized in the campus directory.",
+        canRequestOnboarding: true,
       };
     }
 
-    const persona = PERSONAS[matchedKey];
-    if (persona.password !== password) {
+    const persona = registeredPersonas[matchedKey];
+    if (persona.password && persona.password !== password) {
       return {
         success: false,
         error: "Invalid password for this institutional account. Please verify credentials.",
@@ -454,8 +533,11 @@ export function AppProvider({ children }) {
       token,
       personaKey: matchedKey,
       email: persona.email,
+      name: persona.name,
+      avatar: persona.avatar,
       authMethod: "email",
       authenticated: true,
+      status: "active",
       expiresAt: Date.now() + 86400000,
     };
 
@@ -484,79 +566,351 @@ export function AppProvider({ children }) {
     setTimeout(() => setBannerNotice(null), 3500);
 
     return { success: true };
-  }, [appendAuditLog]);
+  }, [registeredPersonas, appendAuditLog]);
 
   // Login with Google Identity Services (GIS) Profile Payload
   const loginWithGooglePayload = useCallback((profile) => {
     const cleanEmail = (profile.email || "").trim().toLowerCase();
 
-    // Check if matches an existing institutional persona
-    const matchedKey = Object.keys(PERSONAS).find(
-      (k) => PERSONAS[k].email.toLowerCase() === cleanEmail
+    // Check if matches an existing institutional persona in registeredPersonas
+    const matchedKey = Object.keys(registeredPersonas).find(
+      (k) => registeredPersonas[k].email?.toLowerCase() === cleanEmail
     );
 
-    let activeKey = "alex";
-    let personaObj = PERSONAS.alex;
-
     if (matchedKey) {
-      activeKey = matchedKey;
-      personaObj = PERSONAS[matchedKey];
-    } else {
-      // Provision user profile linked to verified Google account
-      activeKey = "alex";
-      personaObj = {
-        ...PERSONAS.alex,
-        name: profile.name || "University Google User",
-        email: cleanEmail || "user@openlabs.edu",
-        avatar: profile.picture || PERSONAS.alex.avatar,
-        id: `usr_google_${profile.sub?.slice(-8) || Math.floor(Math.random() * 90000)}`,
-        title: "Student / Researcher (Google SSO)",
+      const personaObj = registeredPersonas[matchedKey];
+      const token = `google_oauth2_jwt_${profile.sub || Date.now()}`;
+      const newSession = {
+        token,
+        personaKey: matchedKey,
+        email: personaObj.email,
+        name: personaObj.name,
+        avatar: personaObj.avatar,
+        authMethod: "google_oauth",
+        authenticated: true,
+        status: "active",
+        expiresAt: Date.now() + 86400000,
       };
+
+      localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
+      setAuthSession(newSession);
+      setActivePersonaKey(matchedKey);
+      setIsAuthenticated(true);
+      setAuthMethod("google_oauth");
+      setIsAuthModalOpen(false);
+
+      appendAuditLog(
+        "AUTH_GOOGLE_GIS",
+        "Google Identity Services (OAuth 2.0)",
+        `User ${personaObj.name} (${personaObj.email}) authenticated via Google Identity Services. Sub: ${profile.sub || "N/A"}.`,
+        personaObj.name,
+        personaObj.title
+      );
+
+      setBannerNotice(`Authenticated via Google Workspace: ${personaObj.name} (${personaObj.title})`);
+      setTimeout(() => setBannerNotice(null), 3500);
+
+      return { success: true, status: "approved" };
     }
 
-    const token = `google_oauth2_jwt_${profile.sub || Date.now()}`;
-    const newSession = {
-      token,
-      personaKey: activeKey,
-      email: personaObj.email,
-      name: personaObj.name,
-      avatar: personaObj.avatar,
+    // New/Unregistered Email: Forward request to Dr. Elena Vance for Role Designation
+    const existingReq = onboardingRequests.find(
+      (r) => r.email?.toLowerCase() === cleanEmail
+    );
+
+    const requestId = existingReq ? existingReq.id : `req-onb-${Date.now()}`;
+    const applicantName =
+      profile.name ||
+      cleanEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+    if (!existingReq) {
+      const newRequest = {
+        id: requestId,
+        name: applicantName,
+        email: cleanEmail,
+        avatar:
+          profile.picture ||
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        authMethod: "google_oauth",
+        requestedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "pending",
+        suggestedRole: "requester",
+        proposedDepartment: "Mechanical & Aerospace Engineering",
+        notes: "Verified identity via Google Workspace SSO. Awaiting role designation by Dr. Elena Vance.",
+      };
+      setOnboardingRequests((prev) => [newRequest, ...prev]);
+    }
+
+    const pendingSession = {
+      token: `google_oauth2_pending_${profile.sub || Date.now()}`,
+      email: cleanEmail,
+      name: applicantName,
+      avatar:
+        profile.picture ||
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
       authMethod: "google_oauth",
-      authenticated: true,
-      expiresAt: Date.now() + 86400000,
+      authenticated: false,
+      status: "pending_clearance",
+      requestId,
+      requestedAt: new Date().toISOString(),
     };
 
-    localStorage.setItem("openlabs_auth_session", JSON.stringify(newSession));
-    setAuthSession(newSession);
-    setActivePersonaKey(activeKey);
-    setIsAuthenticated(true);
-    setAuthMethod("google_oauth");
+    localStorage.setItem("openlabs_auth_session", JSON.stringify(pendingSession));
+    setAuthSession(pendingSession);
+    setIsAuthenticated(false);
     setIsAuthModalOpen(false);
 
     appendAuditLog(
-      "AUTH_GOOGLE_GIS",
-      "Google Identity Services (OAuth 2.0)",
-      `User ${personaObj.name} (${personaObj.email}) authenticated via Google Identity Services. Sub: ${profile.sub || "N/A"}.`,
-      personaObj.name,
-      personaObj.title
+      "ONBOARDING_REQUEST",
+      "Dr. Elena Vance Clearance Queue",
+      `New Google identity ${applicantName} (${cleanEmail}) queued for role designation.`,
+      applicantName,
+      "Applicant"
     );
 
-    setBannerNotice(`Authenticated via Google Workspace: ${personaObj.name}`);
-    setTimeout(() => setBannerNotice(null), 3500);
+    setBannerNotice(
+      `Access Request Forwarded: Your profile (${cleanEmail}) is awaiting role designation by Dr. Elena Vance.`
+    );
+    setTimeout(() => setBannerNotice(null), 5000);
 
-    return { success: true };
-  }, [appendAuditLog]);
+    return { success: true, pendingClearance: true };
+  }, [registeredPersonas, onboardingRequests, appendAuditLog]);
+
+  // Submit manual / campus email onboarding request to Dr. Elena Vance
+  const submitEmailOnboardingRequest = useCallback(
+    ({ email, name, department, notes }) => {
+      const cleanEmail = email.trim().toLowerCase();
+      const requestId = `req-onb-${Date.now()}`;
+      const applicantName =
+        name?.trim() ||
+        cleanEmail.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+      const newRequest = {
+        id: requestId,
+        name: applicantName,
+        email: cleanEmail,
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        authMethod: "campus_sso",
+        requestedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        status: "pending",
+        suggestedRole: "requester",
+        proposedDepartment: department || "Mechanical & Aerospace Engineering",
+        notes: notes || "Requested campus onboarding through Institutional SSO portal.",
+      };
+
+      setOnboardingRequests((prev) => [
+        newRequest,
+        ...prev.filter((r) => r.email?.toLowerCase() !== cleanEmail),
+      ]);
+
+      const pendingSession = {
+        token: `openlabs_pending_${Date.now()}`,
+        email: cleanEmail,
+        name: applicantName,
+        avatar: newRequest.avatar,
+        authMethod: "campus_sso",
+        authenticated: false,
+        status: "pending_clearance",
+        requestId,
+        requestedAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem("openlabs_auth_session", JSON.stringify(pendingSession));
+      setAuthSession(pendingSession);
+      setIsAuthenticated(false);
+      setIsAuthModalOpen(false);
+
+      appendAuditLog(
+        "ONBOARDING_REQUEST",
+        "Dr. Elena Vance Clearance Queue",
+        `New institutional request for ${applicantName} (${cleanEmail}) forwarded to Lab Director.`,
+        applicantName,
+        "Applicant"
+      );
+
+      setBannerNotice(
+        `Request Submitted: Dr. Elena Vance has been notified to designate your role and clearance level.`
+      );
+      setTimeout(() => setBannerNotice(null), 5000);
+
+      return { success: true };
+    },
+    [appendAuditLog]
+  );
+
+  // Authorize User Designation (Dr. Elena Vance decides role, dept, quota)
+  const authorizeUserDesignation = useCallback(
+    (requestId, options = {}) => {
+      const req = onboardingRequests.find((r) => r.id === requestId);
+      if (!req) return { success: false, error: "Request not found" };
+
+      const role = options.role || req.suggestedRole || "requester";
+      const department =
+        options.department || req.proposedDepartment || "Mechanical & Aerospace Engineering";
+      const maxWeeklyHours =
+        Number(options.maxWeeklyHours) || (role === "owner" ? 20 : role === "admin" ? 0 : 15);
+
+      const rolePrefix = role === "owner" ? "FAC" : role === "admin" ? "ADM" : "STU";
+      const instId = `${rolePrefix}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+      const defaultTitle =
+        role === "owner"
+          ? "Lab Director / Equipment Owner"
+          : role === "admin"
+          ? "Campus Safety Admin / Auditor"
+          : "Student / Researcher";
+      const title = options.title || defaultTitle;
+
+      const personaKey =
+        req.email.split("@")[0].replace(/[^a-z0-9]/g, "_").toLowerCase() +
+        "_" +
+        Math.floor(100 + Math.random() * 900);
+
+      const newPersona = {
+        id: `usr_${personaKey}`,
+        key: personaKey,
+        name: req.name,
+        email: req.email,
+        password: "student123",
+        role,
+        title,
+        department,
+        institutionalId: instId,
+        reputationScore: 0.96,
+        weeklyHoursUsed: 0,
+        maxWeeklyHours,
+        avatar:
+          req.avatar ||
+          "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+        safetyCertificates: [
+          {
+            name: "Haas CNC Safety Level 2",
+            issuer: "Campus Central Makerspace Board",
+            expires: "Oct 2028",
+            verified: true,
+          },
+          {
+            name: "General Laboratory Protocol",
+            issuer: "Campus EH&S Board",
+            expires: "Permanent",
+            verified: true,
+          },
+        ],
+      };
+
+      // 1. Add to registered personas
+      setRegisteredPersonas((prev) => ({
+        ...prev,
+        [personaKey]: newPersona,
+      }));
+
+      // 2. Mark request as approved
+      setOnboardingRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                status: "approved",
+                approvedBy: "Dr. Elena Vance",
+                approvedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                assignedRole: role,
+                assignedTitle: title,
+                institutionalId: instId,
+                department,
+              }
+            : r
+        )
+      );
+
+      // 3. Append cryptographic audit trail log
+      appendAuditLog(
+        "AUTHORIZE_DESIGNATION",
+        `Campus ID ${instId} (${req.name})`,
+        `Dr. Elena Vance granted designation '${title}' in ${department}. Quota: ${maxWeeklyHours}h/wk.`,
+        "Dr. Elena Vance",
+        "Lab Director / Equipment Owner"
+      );
+
+      // 4. If current workstation session is waiting for this user, immediately activate their session!
+      if (authSession?.email?.toLowerCase() === req.email.toLowerCase()) {
+        const activatedSession = {
+          token: `openlabs_jwt_${newPersona.id}_${Date.now()}`,
+          personaKey,
+          email: newPersona.email,
+          name: newPersona.name,
+          avatar: newPersona.avatar,
+          authMethod: req.authMethod || "google_oauth",
+          authenticated: true,
+          status: "active",
+          expiresAt: Date.now() + 86400000,
+        };
+        localStorage.setItem("openlabs_auth_session", JSON.stringify(activatedSession));
+        setAuthSession(activatedSession);
+        setActivePersonaKey(personaKey);
+        setIsAuthenticated(true);
+      }
+
+      setBannerNotice(`Clearance Granted: ${req.name} authorized as ${title} (${instId}).`);
+      setTimeout(() => setBannerNotice(null), 4000);
+
+      return { success: true, persona: newPersona };
+    },
+    [onboardingRequests, authSession, appendAuditLog]
+  );
+
+  // Reject User Request (Dr. Elena Vance declines request)
+  const rejectUserRequest = useCallback(
+    (requestId, reason = "Incomplete institutional credentials") => {
+      const req = onboardingRequests.find((r) => r.id === requestId);
+      if (!req) return;
+
+      setOnboardingRequests((prev) =>
+        prev.map((r) =>
+          r.id === requestId
+            ? {
+                ...r,
+                status: "rejected",
+                rejectedBy: "Dr. Elena Vance",
+                rejectedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                reason,
+              }
+            : r
+        )
+      );
+
+      appendAuditLog(
+        "REJECT_CLEARANCE",
+        `Request ${requestId} (${req.name})`,
+        `Dr. Elena Vance declined access request: ${reason}.`,
+        "Dr. Elena Vance",
+        "Lab Director / Equipment Owner"
+      );
+
+      if (authSession?.email?.toLowerCase() === req.email.toLowerCase()) {
+        localStorage.removeItem("openlabs_auth_session");
+        setAuthSession(null);
+        setIsAuthenticated(false);
+      }
+
+      setBannerNotice(`Declined onboarding request for ${req.name}.`);
+      setTimeout(() => setBannerNotice(null), 3500);
+    },
+    [onboardingRequests, authSession, appendAuditLog]
+  );
 
   // Login with Google OAuth 2.0 Handshake Simulation Fallback
-  const loginWithGoogle = useCallback((personaKey = "alex") => {
-    const persona = PERSONAS[personaKey] || PERSONAS.alex;
-    return loginWithGooglePayload({
-      email: persona.email,
-      name: persona.name,
-      picture: persona.avatar,
-      sub: `gid_${persona.id}`,
-    });
-  }, [loginWithGooglePayload]);
+  const loginWithGoogle = useCallback(
+    (personaKey = "alex") => {
+      const persona = registeredPersonas[personaKey] || PERSONAS[personaKey] || PERSONAS.alex;
+      return loginWithGooglePayload({
+        email: persona.email,
+        name: persona.name,
+        picture: persona.avatar,
+        sub: `gid_${persona.id}`,
+      });
+    },
+    [registeredPersonas, loginWithGooglePayload]
+  );
 
   // Logout & terminate workstation session
   const logout = useCallback(() => {
@@ -767,6 +1121,11 @@ export function AppProvider({ children }) {
         bannerNotice,
         setBannerNotice,
         resetLedger,
+        registeredPersonas,
+        onboardingRequests,
+        authorizeUserDesignation,
+        rejectUserRequest,
+        submitEmailOnboardingRequest,
       }}
     >
       {children}

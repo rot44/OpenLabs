@@ -10,13 +10,32 @@ import {
   FileCheck,
   Building,
   KeyRound,
-  AlertCircle
+  AlertCircle,
+  Clock,
+  Sparkles,
+  UserCheck
 } from "lucide-react";
 
 export function InstitutionalAccessGate({ type = "faculty_required", tabName = "Restricted Area" }) {
-  const { activePersona, isAuthenticated, openAuthModal, setActiveTab } = useApp();
+  const { activePersona, isAuthenticated, openAuthModal, setActiveTab, authSession, switchPersona } = useApp();
 
   const configs = {
+    clearance_pending: {
+      code: "202 ACCEPTED • AWAITING LAB DIRECTOR CLEARANCE",
+      icon: Clock,
+      iconBg: "bg-rust/15 text-rust border-rust/30",
+      badgeText: "Awaiting Dr. Elena Vance Role Designation",
+      title: "Institutional Clearance Under Review",
+      subtitle: `Access to ${tabName} requires an authorized laboratory designation.`,
+      description:
+        "Your institutional credentials have been verified via Google Identity Services or Campus SSO. Before physical custody tokens and machine reservations can be initiated, Dr. Elena Vance must assign your lab designation (Student Researcher, Facility Director, or Safety Auditor), department affiliation, and weekly machinery quota in the Lab Director Hub.",
+      requiredRoleLabel: "Director Clearance & Campus Token (Awaiting Approval)",
+      primaryBtnText: "Switch to Dr. Elena Vance to Authorize",
+      primaryBtnAction: () => {
+        switchPersona("elena");
+        setActiveTab("manager");
+      },
+    },
     auth_required: {
       code: "401 UNAUTHORIZED",
       icon: Lock,
@@ -106,14 +125,42 @@ export function InstitutionalAccessGate({ type = "faculty_required", tabName = "
                 </span>
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
-                    isAuthenticated ? "bg-cobalt/10 text-cobalt" : "bg-earthInk/10 text-earthInk-muted"
+                    authSession?.status === "pending_clearance"
+                      ? "bg-rust/15 text-rust border border-rust/25"
+                      : isAuthenticated
+                      ? "bg-cobalt/10 text-cobalt"
+                      : "bg-earthInk/10 text-earthInk-muted"
                   }`}
                 >
-                  {isAuthenticated ? "Authenticated" : "Unverified Guest"}
+                  {authSession?.status === "pending_clearance"
+                    ? "Pending Clearance"
+                    : isAuthenticated
+                    ? "Authenticated"
+                    : "Unverified Guest"}
                 </span>
               </div>
 
-              {isAuthenticated && activePersona ? (
+              {authSession?.status === "pending_clearance" ? (
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-rust/10 border border-rust/30 flex items-center justify-center font-bold text-rust shrink-0">
+                    {authSession.name ? authSession.name.charAt(0) : "P"}
+                  </div>
+                  <div className="min-w-0 flex-1 text-xs">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="font-bold text-earthInk truncate">{authSession.name || "New Applicant"}</h4>
+                      <span className="px-1.5 py-0.2 rounded bg-rust/15 text-rust text-[9px] font-mono font-bold">
+                        Awaiting Vance
+                      </span>
+                    </div>
+                    <p className="text-earthInk-muted text-[11px] truncate">{authSession.email}</p>
+                    <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-earthInk-faint">
+                      <span>Method: {authSession.authMethod === "google_oauth" ? "Google SSO" : "Campus SSO"}</span>
+                      <span>•</span>
+                      <span className="text-rust font-semibold">Under Review</span>
+                    </div>
+                  </div>
+                </div>
+              ) : isAuthenticated && activePersona ? (
                 <div className="flex items-start gap-3">
                   <img
                     src={activePersona.avatar}

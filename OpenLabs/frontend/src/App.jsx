@@ -9,7 +9,9 @@ import { InstitutionalAccessGate } from "./components/common/InstitutionalAccess
 import { AuthModal } from "./components/auth/AuthModal";
 
 function MainContent() {
-  const { activeTab, bannerNotice, isAuthenticated, activePersona } = useApp();
+  const { activeTab, bannerNotice, isAuthenticated, activePersona, authSession } = useApp();
+
+  const isPendingClearance = authSession?.status === "pending_clearance";
 
   return (
     <div className="min-h-screen bg-sandstone text-earthInk flex flex-col font-sans">
@@ -28,7 +30,12 @@ function MainContent() {
         {activeTab === "catalog" && <ResourceCatalog />}
 
         {activeTab === "custody" &&
-          (!isAuthenticated ? (
+          (isPendingClearance ? (
+            <InstitutionalAccessGate
+              type="clearance_pending"
+              tabName="My Custody & Active Bookings"
+            />
+          ) : !isAuthenticated ? (
             <InstitutionalAccessGate
               type="auth_required"
               tabName="My Custody & Active Bookings"
@@ -38,7 +45,12 @@ function MainContent() {
           ))}
 
         {activeTab === "manager" &&
-          (!isAuthenticated ? (
+          (isPendingClearance ? (
+            <InstitutionalAccessGate
+              type="clearance_pending"
+              tabName="Lab Director Control Center"
+            />
+          ) : !isAuthenticated ? (
             <InstitutionalAccessGate
               type="auth_required"
               tabName="Lab Director Control Center"
@@ -53,7 +65,12 @@ function MainContent() {
           ))}
 
         {activeTab === "audit" &&
-          (!isAuthenticated ? (
+          (isPendingClearance ? (
+            <InstitutionalAccessGate
+              type="clearance_pending"
+              tabName="Campus Safety & Fairness Ledger"
+            />
+          ) : !isAuthenticated ? (
             <InstitutionalAccessGate
               type="auth_required"
               tabName="Campus Safety & Fairness Ledger"

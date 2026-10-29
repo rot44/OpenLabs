@@ -2,7 +2,21 @@ import React, { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
-import { X, Lock, Mail, AlertCircle, ArrowRight, Building2, Eye, EyeOff, ShieldCheck, HelpCircle, ExternalLink } from "lucide-react";
+import {
+  X,
+  Lock,
+  Mail,
+  AlertCircle,
+  ArrowRight,
+  Building2,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+  HelpCircle,
+  ExternalLink,
+  UserPlus,
+  Sparkles
+} from "lucide-react";
 
 export function AuthModal() {
   const {
@@ -10,6 +24,7 @@ export function AuthModal() {
     closeAuthModal,
     loginWithEmail,
     loginWithGooglePayload,
+    submitEmailOnboardingRequest,
   } = useApp();
 
   const [email, setEmail] = useState("");
@@ -17,6 +32,7 @@ export function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberWorkstation, setRememberWorkstation] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [canRequestOnboarding, setCanRequestOnboarding] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleOriginError, setGoogleOriginError] = useState(false);
@@ -82,6 +98,7 @@ export function AuthModal() {
   const handleEmailSubmit = (e) => {
     e.preventDefault();
     setErrorMessage("");
+    setCanRequestOnboarding(false);
 
     // Input validation
     const trimmedEmail = email.trim();
@@ -92,13 +109,6 @@ export function AuthModal() {
 
     if (!trimmedEmail.includes("@")) {
       setErrorMessage("Invalid email format. Please provide a valid email address.");
-      return;
-    }
-
-    if (!trimmedEmail.endsWith("@openlabs.edu")) {
-      setErrorMessage(
-        "Unverified Institutional Domain: Access restricted to authorized @openlabs.edu accounts."
-      );
       return;
     }
 
@@ -114,11 +124,15 @@ export function AuthModal() {
       setIsSubmitting(false);
       if (!result.success) {
         setErrorMessage(result.error);
+        if (result.canRequestOnboarding || !trimmedEmail.endsWith("@openlabs.edu")) {
+          setCanRequestOnboarding(true);
+        }
       } else {
         // Reset state on successful login
         setEmail("");
         setPassword("");
         setErrorMessage("");
+        setCanRequestOnboarding(false);
       }
     }, 450);
   };
@@ -216,6 +230,39 @@ export function AuthModal() {
                 <strong className="font-bold">Access Denied: </strong>
                 <span>{errorMessage}</span>
               </div>
+            </div>
+          )}
+
+          {/* New Email / Unregistered Personnel Clearance Prompt for Dr. Elena Vance */}
+          {canRequestOnboarding && (
+            <div className="p-4 rounded-2xl bg-sandstone/70 border border-cobalt/35 space-y-3 animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <Sparkles className="w-4 h-4 text-cobalt shrink-0 mt-0.5" />
+                <div className="text-xs text-earthInk space-y-1">
+                  <div className="font-bold text-cobalt">Unregistered Identity Detected</div>
+                  <p className="text-earthInk-muted text-[11px] leading-relaxed">
+                    This email is not yet registered in the campus personnel roster. You can submit an onboarding request directly to <strong>Dr. Elena Vance (Lab Director)</strong> to assign your laboratory role and machinery quota.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="btn-submit-onboarding-request"
+                onClick={() => {
+                  submitEmailOnboardingRequest({
+                    email,
+                    name: email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+                    department: "Mechanical & Aerospace Engineering",
+                  });
+                  setCanRequestOnboarding(false);
+                  setEmail("");
+                  setPassword("");
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-cobalt text-white text-xs font-bold hover:bg-cobalt-hover shadow-sm transition-all cursor-pointer"
+              >
+                <UserPlus className="w-3.5 h-3.5" />
+                <span>Forward Clearance Request to Dr. Elena Vance &rarr;</span>
+              </button>
             </div>
           )}
 
