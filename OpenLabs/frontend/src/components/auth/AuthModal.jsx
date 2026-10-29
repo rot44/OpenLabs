@@ -17,6 +17,7 @@ export function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberWorkstation, setRememberWorkstation] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleOriginError, setGoogleOriginError] = useState(false);
 
