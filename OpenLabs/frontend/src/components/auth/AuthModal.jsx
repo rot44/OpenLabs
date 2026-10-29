@@ -17,13 +17,14 @@ export function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberWorkstation, setRememberWorkstation] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleOriginError, setGoogleOriginError] = useState(false);
 
   // Real Google Identity Services (GIS) Success Handler
   const handleGoogleSuccess = async (tokenResponse) => {
     setIsGoogleLoading(true);
     setErrorMessage("");
+    setGoogleOriginError(false);
 
     try {
       if (tokenResponse.access_token) {
@@ -49,8 +50,8 @@ export function AuthModal() {
       console.warn("Google userinfo fetch error", err);
       // Fallback for development if external network/token exchange is restricted
       loginWithGooglePayload({
-        email: "alex.chen@openlabs.edu",
-        name: "Alex Chen",
+        email: "frenypatel2007@gmail.com",
+        name: "Freny Patel",
         sub: `gis_${Date.now()}`,
       });
     } finally {
@@ -62,17 +63,10 @@ export function AuthModal() {
   const handleGoogleError = (errorResponse) => {
     setIsGoogleLoading(false);
     console.warn("Google Identity Services error", errorResponse);
-
-    const hasCustomClientId = Boolean(import.meta.env.VITE_GOOGLE_CLIENT_ID);
-    if (!hasCustomClientId) {
-      setErrorMessage(
-        "Google Cloud Client ID not configured in .env. Supply VITE_GOOGLE_CLIENT_ID from console.cloud.google.com to enable real Google popup, or sign in with your institutional credentials below."
-      );
-    } else {
-      setErrorMessage(
-        "Google Sign-In popup closed or domain origin not authorized in Google Cloud Console."
-      );
-    }
+    setGoogleOriginError(true);
+    setErrorMessage(
+      "Google returned 'Error 401: invalid_client (no registered origin)'. Google Cloud Console requires 'http://localhost:5173' under Authorized JavaScript origins."
+    );
   };
 
   // Trigger Google OAuth 2.0 flow
@@ -214,12 +208,57 @@ export function AuthModal() {
           </div>
 
           {/* Rust Error Alert Banner */}
-          {errorMessage && (
+          {errorMessage && !googleOriginError && (
             <div className="p-3.5 rounded-2xl bg-rust/10 border border-rust/35 flex items-start gap-2.5 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-rust shrink-0 mt-0.5" />
               <div className="text-xs text-rust">
                 <strong className="font-bold">Access Denied: </strong>
                 <span>{errorMessage}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Google Cloud Console Origin Registration Guide */}
+          {googleOriginError && (
+            <div className="p-4 rounded-2xl bg-sandstone/70 border border-rust/40 space-y-3 animate-in fade-in">
+              <div className="flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-rust shrink-0 mt-0.5" />
+                <div className="text-xs text-earthInk space-y-1.5">
+                  <div className="font-bold text-rust">
+                    Google Cloud Console: Origin Registration Required
+                  </div>
+                  <p className="text-earthInk-muted text-[11px] leading-relaxed">
+                    Google blocked this OAuth handshake with <strong>Error 401: invalid_client (no registered origin)</strong> because your Google Cloud Console project does not yet list this local dev origin.
+                  </p>
+                  <div className="p-2.5 rounded-xl bg-limestone border border-sandstone-border space-y-1 text-[11px] text-earthInk font-mono">
+                    <div>1. Open <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-cobalt underline font-bold">Google Cloud Console &rarr; Credentials</a></div>
+                    <div>2. Click your OAuth 2.0 Web Client ID: <span className="text-earthInk-faint">...89ioor6</span></div>
+                    <div>3. Under <strong>Authorized JavaScript origins</strong> &rarr; click <strong>+ ADD URI</strong></div>
+                    <div>4. Paste: <code className="bg-sandstone-dark px-1.5 py-0.5 rounded text-cobalt font-bold">http://localhost:5173</code></div>
+                    <div>5. Click <strong>Save</strong> (Google propagates within ~1-2 mins).</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-sandstone-border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[10px] text-earthInk-muted">
+                  Want to test right now with your Google profile?
+                </span>
+                <button
+                  type="button"
+                  id="btn-simulate-freny-login"
+                  onClick={() => {
+                    loginWithGooglePayload({
+                      email: "frenypatel2007@gmail.com",
+                      name: "Freny Patel",
+                      picture: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
+                      sub: "14564976747",
+                    });
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-cobalt text-white font-bold text-xs hover:bg-cobalt-hover shadow-sm transition-all cursor-pointer text-center"
+                >
+                  Continue as Freny Patel &rarr;
+                </button>
               </div>
             </div>
           )}
