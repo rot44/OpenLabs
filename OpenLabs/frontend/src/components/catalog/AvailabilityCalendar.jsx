@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Calendar as CalendarIcon, Clock, Check, AlertCircle } from "lucide-react";
+import React from "react";
+import { Calendar as CalendarIcon, Check } from "lucide-react";
 
 export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle }) {
   const days = ["Mon (Today)", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -12,12 +12,9 @@ export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle
     "19:00 - 21:00",
   ];
 
-  // Seeded status map for realistic lab operations
-  // key: `${dayIdx}-${slotIdx}`
-  // status: 'available' | 'buffer' | 'booked'
   const getSlotStatus = (dIdx, sIdx) => {
-    if (dIdx === 0 && sIdx === 1) return "booked"; // Booked by another researcher
-    if (dIdx === 0 && sIdx === 2) return "buffer"; // 30-min Turnaround Maintenance
+    if (dIdx === 0 && sIdx === 1) return "booked";
+    if (dIdx === 0 && sIdx === 2) return "buffer";
     if (dIdx === 1 && sIdx === 3) return "booked";
     if (dIdx === 2 && sIdx === 0) return "buffer";
     return "available";
@@ -34,30 +31,30 @@ export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle
   };
 
   return (
-    <div className="flex flex-col bg-zinc-900/80 rounded-2xl border border-border p-4">
+    <div className="flex flex-col bg-limestone rounded-2xl border border-sandstone-border p-4 shadow-stone-sm">
       {/* Header and Legend */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-border">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-sandstone-border">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="w-4 h-4 text-emerald-400" />
-          <span className="text-xs font-semibold text-zinc-200">7-Day Real-Time Dispatch Grid</span>
+          <CalendarIcon className="w-4 h-4 text-cobalt" />
+          <span className="text-xs font-bold text-earthInk">7-Day Real-Time Dispatch Grid</span>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] text-zinc-400">
+        <div className="flex items-center gap-3 text-[11px] text-earthInk-muted">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/20 border border-emerald-500/60" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-cobalt/20 border border-cobalt/60" />
             Available
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/20 border border-amber-500/60" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-rust/25 border border-rust/60" />
             30m Buffer
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-zinc-800 border border-zinc-700" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-sandstone border border-sandstone-border" />
             Booked
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-blue-500 border border-blue-400" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-cobalt border border-cobalt" />
             Selected
           </span>
         </div>
@@ -67,19 +64,19 @@ export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle
       <div className="mt-4 overflow-x-auto">
         <table className="w-full text-xs text-left border-collapse">
           <thead>
-            <tr className="border-b border-zinc-800">
-              <th className="py-2 px-2 text-[10px] text-zinc-500 uppercase font-mono">Time</th>
+            <tr className="border-b border-sandstone-border">
+              <th className="py-2 px-2 text-[10px] text-earthInk-faint uppercase font-mono">Time</th>
               {days.map((day, idx) => (
-                <th key={idx} className="py-2 px-2 text-[11px] font-semibold text-zinc-300 text-center">
+                <th key={idx} className="py-2 px-2 text-[11px] font-bold text-earthInk text-center">
                   {day}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-850">
+          <tbody className="divide-y divide-sandstone-border/60">
             {timeSlots.map((slot, sIdx) => (
-              <tr key={sIdx} className="hover:bg-zinc-850/40 transition-colors">
-                <td className="py-2.5 px-2 font-mono text-[11px] text-zinc-400 whitespace-nowrap">
+              <tr key={sIdx} className="hover:bg-sandstone/40 transition-colors">
+                <td className="py-2.5 px-2 font-mono text-[11px] text-earthInk-muted whitespace-nowrap font-medium">
                   {slot}
                 </td>
                 {days.map((day, dIdx) => {
@@ -91,19 +88,19 @@ export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle
                   let label = "";
 
                   if (isSelected) {
-                    cellClass = "bg-blue-600/90 text-white font-semibold shadow-md ring-1 ring-blue-400";
+                    cellClass = "bg-cobalt text-white font-bold shadow-md ring-1 ring-cobalt-light";
                     label = "Selected";
                   } else if (status === "available") {
                     cellClass =
-                      "bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 hover:text-white border border-emerald-900/40 cursor-pointer";
+                      "bg-cobalt/10 text-cobalt hover:bg-cobalt hover:text-white border border-cobalt/25 cursor-pointer font-semibold";
                     label = "Open";
                   } else if (status === "buffer") {
                     cellClass =
-                      "bg-amber-950/30 text-amber-400/80 border border-amber-900/30 cursor-not-allowed";
+                      "bg-rust/15 text-rust-dark border border-rust/25 cursor-not-allowed font-medium";
                     label = "Buffer";
                   } else {
                     cellClass =
-                      "bg-zinc-850/60 text-zinc-500 border border-zinc-800 cursor-not-allowed";
+                      "bg-sandstone/70 text-earthInk-faint border border-sandstone-border cursor-not-allowed";
                     label = "Hold";
                   }
 
@@ -126,16 +123,16 @@ export function AvailabilityCalendar({ onSlotSelect, selectedSlot, resourceTitle
         </table>
       </div>
 
-      {/* Selected Slot Feedback */}
+      {/* Selected Slot Feedback in Weathered Stone Surface */}
       {selectedSlot && (
-        <div className="mt-4 p-3 rounded-xl bg-blue-950/40 border border-blue-800/50 flex items-center justify-between text-xs text-blue-200">
+        <div className="mt-4 p-3 rounded-xl bg-weathered/30 border border-weathered/60 flex items-center justify-between text-xs text-earthInk">
           <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-blue-400" />
+            <Check className="w-4 h-4 text-cobalt" />
             <span>
-              Selected Time Window: <strong>{selectedSlot.dateString}</strong> ({selectedSlot.durationHours} hours)
+              Selected Time Window: <strong className="text-cobalt">{selectedSlot.dateString}</strong> ({selectedSlot.durationHours} hours)
             </span>
           </div>
-          <span className="font-mono text-[11px] text-blue-300">
+          <span className="font-mono text-[11px] text-earthInk-muted font-semibold">
             Quota Impact: -{selectedSlot.durationHours}h
           </span>
         </div>

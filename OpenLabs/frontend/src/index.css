@@ -3,49 +3,55 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: #09090b;
-  color: #f4f4f5;
+  background-color: #E9DFCE; /* Sandstone */
+  color: #332F29;            /* Earth Ink */
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow-x: hidden;
 }
 
-/* Custom Sleek Scrollbar */
+/* Custom Sleek Stone Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #09090b;
+  background: #E9DFCE;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #27272a;
+  background: #C8B89E;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
+  background: #B4A388;
 }
 
-/* Glassmorphism helpers */
-.glass-panel {
-  background: rgba(24, 24, 27, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(39, 39, 42, 0.8);
+/* Glassmorphism & Surface Helpers in Sandstone Theme */
+.stone-glass {
+  background: rgba(246, 241, 232, 0.88); /* Limestone translucency */
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(216, 204, 186, 0.8);
 }
 
-.glass-dropdown {
-  background: rgba(24, 24, 27, 0.95);
-  backdrop-filter: blur(16px);
-  border: 1px solid rgba(63, 63, 70, 0.6);
+.stone-card {
+  background: #F6F1E8; /* Limestone */
+  border: 1px solid #D8CCBA; /* Sandstone border */
+  box-shadow: 0 4px 14px rgba(51, 47, 41, 0.05);
+}
+
+.stone-card-elevated {
+  background: #FAF7F2;
+  border: 1px solid #D1C4B0;
+  box-shadow: 0 8px 24px rgba(51, 47, 41, 0.08);
 }
 
 /* Interactive diff slider clipping */
@@ -55,11 +61,11 @@ body {
   user-select: none;
 }
 
-/* Pulse Glow Shadow */
-.emerald-glow {
-  box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.35);
+/* Glow Shadows */
+.cobalt-glow {
+  box-shadow: 0 0 20px -3px rgba(37, 71, 168, 0.35);
 }
 
-.cyan-glow {
-  box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.35);
+.rust-glow {
+  box-shadow: 0 0 20px -3px rgba(182, 93, 63, 0.35);
 }

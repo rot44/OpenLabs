@@ -91,13 +91,12 @@ export function MyBookingsList() {
           return (
             <div
               key={booking.id}
-              className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 rounded-2xl bg-surface border transition-all ${
-                isCheckedIn
-                  ? "border-blue-500/50 shadow-lg shadow-blue-950/20"
-                  : isApproved
+              className={`flex flex-col lg:flex-row lg:items-center justify-between gap-6 p-6 rounded-2xl bg-surface border transition-all ${isCheckedIn
+                ? "border-blue-500/50 shadow-lg shadow-blue-950/20"
+                : isApproved
                   ? "border-emerald-500/40 shadow-lg shadow-emerald-950/10"
                   : "border-border"
-              }`}
+                }`}
             >
               {/* Left Column: Asset Info & Purpose */}
               <div className="space-y-2 flex-1">

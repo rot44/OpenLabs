@@ -68,12 +68,12 @@ function MainContent() {
       switchPersona("marcus");
       setActiveTab("audit");
 
-      // Celebrate with fireworks confetti!
+      // Celebrate with fireworks confetti tailored to palette!
       confetti({
         particleCount: 120,
         spread: 80,
         origin: { y: 0.6 },
-        colors: ["#10b981", "#06b6d4", "#3b82f6", "#f59e0b"],
+        colors: ["#2547A8", "#B65D3F", "#C8B89E", "#332F29", "#E9DFCE"],
       });
     } else if (tourStep === 6) {
       // Finish tour
@@ -135,7 +135,7 @@ function MainContent() {
   const currentTour = tourPrompts[tourStep];
 
   return (
-    <div className="min-h-screen bg-canvas text-zinc-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-sandstone text-earthInk flex flex-col font-sans">
       {/* Top 1-Click Evaluator Bar */}
       <JudgeBar onStartTour={handleStartTour} />
 
@@ -144,21 +144,21 @@ function MainContent() {
 
       {/* Guided Tour Floating Banner */}
       {currentTour && (
-        <div className="sticky top-14 z-40 w-full bg-gradient-to-r from-emerald-950/95 via-zinc-900/95 to-cyan-950/95 border-b border-emerald-500/50 backdrop-blur-md px-4 py-3 shadow-2xl">
+        <div className="sticky top-14 z-40 w-full bg-limestone/95 border-b border-cobalt/30 backdrop-blur-md px-4 py-3 shadow-md">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
-              <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">
+              <span className="p-2 rounded-xl bg-cobalt/15 text-cobalt border border-cobalt/30 shrink-0">
                 <Sparkles className="w-5 h-5 animate-spin" />
               </span>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-emerald-500/30 text-emerald-300">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase bg-cobalt/15 text-cobalt border border-cobalt/20">
                     Tour Step {currentTour.step} of 6
                   </span>
-                  <span className="text-xs text-zinc-400">• Role: {currentTour.role}</span>
+                  <span className="text-xs text-earthInk-muted">• Role: {currentTour.role}</span>
                 </div>
-                <h4 className="text-sm font-bold text-white mt-0.5">{currentTour.title}</h4>
-                <p className="text-xs text-zinc-300 mt-0.5 max-w-3xl leading-relaxed">
+                <h4 className="text-sm font-bold text-earthInk mt-0.5">{currentTour.title}</h4>
+                <p className="text-xs text-earthInk-muted mt-0.5 max-w-3xl leading-relaxed">
                   {currentTour.description}
                 </p>
               </div>
@@ -167,14 +167,14 @@ function MainContent() {
             <div className="flex items-center gap-2.5 self-end md:self-center shrink-0">
               <button
                 onClick={handleCancelTour}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-earthInk-muted hover:text-earthInk transition-colors"
               >
                 Exit Tour
               </button>
               <button
                 id="btn-next-tour-step"
                 onClick={handleNextTourStep}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-zinc-950 bg-emerald-400 hover:bg-emerald-300 shadow-lg shadow-emerald-950/40 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-cobalt hover:bg-cobalt-hover shadow-md shadow-cobalt/20 transition-all cursor-pointer"
               >
                 <span>{currentTour.actionLabel}</span>
                 <ChevronRight className="w-4 h-4" />
@@ -186,7 +186,7 @@ function MainContent() {
 
       {/* System Banner Notice */}
       {bannerNotice && (
-        <div className="bg-zinc-850 border-b border-zinc-700/60 px-4 py-1.5 text-center text-xs text-zinc-300 animate-in fade-in">
+        <div className="bg-weathered/40 border-b border-sandstone-border px-4 py-1.5 text-center text-xs text-earthInk animate-in fade-in">
           <span>{bannerNotice}</span>
         </div>
       )}
@@ -219,14 +219,14 @@ function MainContent() {
       />
 
       {/* Global Footer */}
-      <footer className="border-t border-border bg-surface/30 px-4 py-6 text-center text-xs text-zinc-500">
+      <footer className="border-t border-sandstone-border bg-limestone/60 px-4 py-6 text-center text-xs text-earthInk-muted">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400" />
-            <span className="text-zinc-300 font-semibold">OpenLabs AI</span>
+            <span className="w-2 h-2 rounded-full bg-cobalt" />
+            <span className="text-earthInk font-semibold">OpenLabs AI</span>
             <span>— Institutional Resource & Equipment Sharing Platform</span>
           </div>
-          <div className="text-[11px] font-mono text-zinc-400">
+          <div className="text-[11px] font-mono text-earthInk-muted">
             CodeHack 48h Hackathon • Member 2 (Frontend & Judge Experience Lead)
           </div>
         </div>

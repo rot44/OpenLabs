@@ -3,10 +3,10 @@ import { useApp } from "../../context/AppContext";
 import { ResourceCard } from "./ResourceCard";
 import { ResourceDetailModal } from "./ResourceDetailModal";
 import { BookingModal } from "./BookingModal";
-import { Search, Sparkles, Filter, CheckCircle2 } from "lucide-react";
+import { Search, Sparkles, CheckCircle2 } from "lucide-react";
 
 export function ResourceCatalog() {
-  const { resources, activePersona } = useApp();
+  const { resources } = useApp();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [detailResource, setDetailResource] = useState(null);
@@ -31,7 +31,6 @@ export function ResourceCatalog() {
     "ISO 5 Cleanroom",
   ];
 
-  // Filtering
   const filteredResources = resources.filter((res) => {
     const matchesCategory =
       selectedCategory === "all" || res.category === selectedCategory;
@@ -59,23 +58,23 @@ export function ResourceCatalog() {
     <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-950/95 border border-emerald-500/50 text-emerald-300 text-xs shadow-2xl backdrop-blur-md animate-in slide-in-from-bottom-3">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-          <span>{toastMessage}</span>
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-limestone border border-cobalt/40 text-earthInk text-xs shadow-stone-xl backdrop-blur-md animate-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-4 h-4 text-cobalt" />
+          <span className="font-semibold">{toastMessage}</span>
         </div>
       )}
 
-      {/* Hero Discovery Banner */}
-      <div className="relative rounded-3xl bg-gradient-to-b from-surface to-surface/80 border border-border p-6 md:p-8 overflow-hidden">
+      {/* Hero Discovery Banner in Limestone Surface */}
+      <div className="relative rounded-3xl bg-limestone border border-sandstone-border p-6 md:p-8 overflow-hidden shadow-stone-md">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cobalt/10 border border-cobalt/25 text-cobalt text-xs font-bold mb-3">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Institutional Asset Dispatch Engine</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-earthInk tracking-tight">
             Discover & Share Specialized Research Infrastructure
           </h1>
-          <p className="mt-2 text-sm text-zinc-400 leading-relaxed">
+          <p className="mt-2 text-sm text-earthInk-muted leading-relaxed">
             Eliminate equipment idle time across departments. Access certified CNC machinery, cleanrooms, optical microscopes, and prototyping tools with automated qualification matching.
           </p>
         </div>
@@ -83,19 +82,19 @@ export function ResourceCatalog() {
         {/* Search Bar with Natural Language Intent */}
         <div className="relative z-10 mt-6 max-w-2xl">
           <div className="relative flex items-center">
-            <Search className="absolute left-4 w-5 h-5 text-zinc-500 pointer-events-none" />
+            <Search className="absolute left-4 w-5 h-5 text-earthInk-faint pointer-events-none" />
             <input
               type="text"
               id="catalog-search-input"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search by equipment name, department, capability, or training badge..."
-              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-zinc-950/90 border border-zinc-700/80 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/60 shadow-inner"
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-limestone-light border border-sandstone-border text-sm text-earthInk placeholder-earthInk-faint focus:outline-none focus:ring-2 focus:ring-cobalt/50 shadow-inner"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery("")}
-                className="absolute right-4 text-xs text-zinc-400 hover:text-white"
+                className="absolute right-4 text-xs font-semibold text-earthInk-muted hover:text-earthInk"
               >
                 Clear
               </button>
@@ -104,12 +103,12 @@ export function ResourceCatalog() {
 
           {/* Quick Intent Chips */}
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            <span className="text-[11px] text-zinc-500 font-mono">Suggested:</span>
+            <span className="text-[11px] text-earthInk-faint font-mono">Suggested:</span>
             {suggestionChips.map((chip, idx) => (
               <button
                 key={idx}
                 onClick={() => setSearchQuery(chip)}
-                className="px-2.5 py-1 rounded-lg text-[11px] bg-zinc-900/90 text-zinc-400 hover:text-emerald-300 border border-zinc-800 hover:border-emerald-500/40 transition-colors"
+                className="px-2.5 py-1 rounded-xl text-[11px] font-medium bg-sandstone/60 text-earthInk-muted hover:text-cobalt hover:bg-limestone border border-sandstone-border transition-colors shadow-sm"
               >
                 {chip}
               </button>
@@ -117,22 +116,22 @@ export function ResourceCatalog() {
           </div>
         </div>
 
-        {/* Ambient background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-20 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+        {/* Ambient background decoration in Weathered Stone and Rust */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-weathered/30 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-20 w-80 h-80 bg-rust/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
       {/* Category Pills & Filters Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-sandstone-border">
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 selectedCategory === cat.id
-                  ? "bg-zinc-800 text-emerald-400 border border-emerald-500/40 shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850"
+                  ? "bg-cobalt text-white shadow-sm"
+                  : "text-earthInk-muted hover:text-earthInk hover:bg-limestone"
               }`}
             >
               {cat.label}
@@ -140,8 +139,8 @@ export function ResourceCatalog() {
           ))}
         </div>
 
-        <div className="text-xs text-zinc-400 font-mono">
-          Showing <span className="text-zinc-200 font-semibold">{filteredResources.length}</span> verified assets
+        <div className="text-xs text-earthInk-faint font-mono">
+          Showing <span className="text-earthInk font-bold">{filteredResources.length}</span> verified assets
         </div>
       </div>
 
