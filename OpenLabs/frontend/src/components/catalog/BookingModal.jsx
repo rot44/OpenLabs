@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
-import { X, ShieldCheck, UploadCloud, CheckCircle2, Clock, ArrowRight, Sparkles, AlertCircle } from "lucide-react";
+import { X, ShieldCheck, UploadCloud, CheckCircle2, Clock, ArrowRight, Sparkles, AlertCircle, FileCheck, RefreshCw } from "lucide-react";
 
 export function BookingModal({ resource, initialSlot, isOpen, onClose, onSuccess }) {
   const { activePersona, submitBooking } = useApp();
@@ -10,6 +10,8 @@ export function BookingModal({ resource, initialSlot, isOpen, onClose, onSuccess
   const [notes, setNotes] = useState("");
   const [isSimulatingOcr, setIsSimulatingOcr] = useState(false);
   const [uploadedCert, setUploadedCert] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   if (!isOpen || !resource) return null;
 
@@ -23,16 +25,62 @@ export function BookingModal({ resource, initialSlot, isOpen, onClose, onSuccess
     activePersona.maxWeeklyHours > 0 &&
     activePersona.weeklyHoursUsed + durationHours > activePersona.maxWeeklyHours;
 
+  const handleProcessFile = (file) => {
+    if (!file) return;
+    setIsSimulatingOcr(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      setTimeout(() => {
+        setIsSimulatingOcr(false);
+        setUploadedCert({
+          name: file.name,
+          size: `${(file.size / 1024).toFixed(1)} KB`,
+          score: "99.2%",
+          issuer: "Institutional EH&S Accreditation System",
+          dataUrl,
+        });
+      }, 1000);
+    };
+    reader.onerror = () => {
+      setIsSimulatingOcr(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleProcessFile(file);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleProcessFile(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
   const handleSimulateUpload = () => {
     setIsSimulatingOcr(true);
     setTimeout(() => {
       setIsSimulatingOcr(false);
       setUploadedCert({
-        name: `${requiredCert}_verified_doc.pdf`,
+        name: `${requiredCert}_verified_credential.pdf`,
+        size: "248.5 KB",
         score: "98.7%",
         issuer: "Accredited Campus Laboratory Board",
+        dataUrl: "data:application/pdf;base64,JVBERi0xLjQKMSAwIG9ia...",
       });
-    }, 1500);
+    }, 1000);
   };
 
   const handleSubmit = (e) => {
@@ -42,7 +90,8 @@ export function BookingModal({ resource, initialSlot, isOpen, onClose, onSuccess
       notes,
       date: initialSlot ? initialSlot.dateString : "Tomorrow, 14:00 - 17:00",
       durationHours,
-      certName: requiredCert,
+      certName: uploadedCert?.name || requiredCert,
+      certDocBase64: uploadedCert?.dataUrl || null,
     });
     onSuccess(booking);
     onClose();
@@ -106,56 +155,114 @@ export function BookingModal({ resource, initialSlot, isOpen, onClose, onSuccess
               </span>
             </div>
 
-            {userHasCert ? (
+            {userHasCert && !uploadedCert ? (
               <div className="flex items-center justify-between p-3 rounded-xl bg-cobalt/10 border border-cobalt/25 text-xs text-earthInk">
                 <div className="flex items-center gap-2.5">
                   <CheckCircle2 className="w-4 h-4 text-cobalt shrink-0" />
                   <div>
-                    <span className="font-bold text-earthInk">{requiredCert}</span> on file
+                    <span className="font-bold text-earthInk">{requiredCert}</span> on institutional record
                     <div className="text-[11px] text-earthInk-muted">
                       Issued by Campus Makerspace Board • Valid through Dec 2027
                     </div>
                   </div>
                 </div>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cobalt text-white shadow-sm">
-                  TrustScan 98.4%
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cobalt text-white shadow-sm">
+                    Verified
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-[10px] text-cobalt hover:underline font-semibold"
+                  >
+                    Upload New
+                  </button>
+                </div>
               </div>
             ) : uploadedCert ? (
-              <div className="flex items-center justify-between p-3 rounded-xl bg-weathered/30 border border-weathered/60 text-xs text-earthInk">
-                <div className="flex items-center gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-cobalt shrink-0" />
-                  <div>
-                    <span className="font-bold text-earthInk">{uploadedCert.name}</span>
-                    <div className="text-[11px] text-earthInk-muted">
-                      OCR Verified • Match Score: {uploadedCert.score}
+              <div className="p-3 rounded-xl bg-weathered/30 border border-weathered/60 text-xs text-earthInk space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <FileCheck className="w-4 h-4 text-cobalt shrink-0" />
+                    <div>
+                      <span className="font-bold text-earthInk">{uploadedCert.name}</span>
+                      <div className="text-[11px] text-earthInk-muted">
+                        Size: {uploadedCert.size} • TrustScan Match: {uploadedCert.score}
+                      </div>
                     </div>
                   </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-cobalt text-white font-mono font-bold">
+                    OCR Verified
+                  </span>
                 </div>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cobalt text-white font-mono font-bold">
-                  Verified
-                </span>
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-weathered/40">
+                  <button
+                    type="button"
+                    onClick={() => setUploadedCert(null)}
+                    className="text-[10px] text-rust-dark hover:underline font-semibold"
+                  >
+                    Remove File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-[10px] text-cobalt hover:underline font-semibold"
+                  >
+                    Replace Document
+                  </button>
+                </div>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-sandstone-border hover:border-cobalt/60 rounded-2xl p-4 text-center cursor-pointer transition-colors bg-limestone-light">
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-all bg-limestone-light ${
+                  isDragging ? "border-cobalt bg-cobalt/5 scale-[1.01]" : "border-sandstone-border hover:border-cobalt/60"
+                }`}
+              >
                 {isSimulatingOcr ? (
                   <div className="flex flex-col items-center justify-center py-3 gap-2">
                     <Sparkles className="w-6 h-6 text-cobalt animate-spin" />
                     <span className="text-xs font-semibold text-cobalt">
-                      TrustScan OCR parsing safety badge & metadata...
+                      TrustScan OCR parsing safety badge & signature hashes...
                     </span>
                   </div>
                 ) : (
-                  <div onClick={handleSimulateUpload} className="flex flex-col items-center justify-center py-2">
+                  <div className="flex flex-col items-center justify-center py-2">
                     <UploadCloud className="w-6 h-6 text-earthInk-muted mb-1" />
                     <span className="text-xs font-semibold text-earthInk">
-                      Click to upload safety certification PDF / PNG
+                      Click to browse or drag & drop certificate (PDF, PNG, JPG)
                     </span>
                     <span className="text-[10px] text-earthInk-muted mt-0.5">
-                      (Or click to auto-run TrustScan OCR simulation for testing)
+                      Target qualification: {requiredCert}
                     </span>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Hidden File Input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {/* 1-Click Test Simulation Pill */}
+            {!uploadedCert && (
+              <div className="mt-2.5 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={handleSimulateUpload}
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-cobalt hover:text-cobalt-hover bg-cobalt/5 hover:bg-cobalt/10 px-2.5 py-1 rounded-lg border border-cobalt/15 transition-colors"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>⚡ Auto-Fill Sample Verified Certificate</span>
+                </button>
               </div>
             )}
           </div>

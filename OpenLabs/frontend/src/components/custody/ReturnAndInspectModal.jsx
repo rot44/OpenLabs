@@ -1,19 +1,39 @@
 import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
-import { X, Sparkles, AlertTriangle, Sliders, ArrowRight } from "lucide-react";
+import { X, Sparkles, AlertTriangle, Sliders, ArrowRight, UploadCloud, Camera, CheckCircle2 } from "lucide-react";
 
 export function ReturnAndInspectModal({ booking, isOpen, onClose, onReturnComplete }) {
   const { returnEquipment } = useApp();
   const [sliderPosition, setSliderPosition] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
+
+  const defaultBaseline =
+    booking?.baselinePhotos?.[0]?.url ||
+    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80";
+
+  const defaultReturn =
+    "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80";
+
+  const [returnPhoto, setReturnPhoto] = useState(defaultReturn);
+  const [isCustomPhoto, setIsCustomPhoto] = useState(false);
 
   if (!isOpen || !booking) return null;
 
-  const baselinePhoto =
-    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80";
-  const returnPhoto =
-    "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80";
+  const baselinePhoto = defaultBaseline;
+
+  const handleUploadPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setReturnPhoto(event.target.result);
+        setIsCustomPhoto(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handlePointerMove = (e) => {
     if (!isDragging || !containerRef.current) return;
@@ -34,6 +54,7 @@ export function ReturnAndInspectModal({ booking, isOpen, onClose, onReturnComple
       notes: dispute
         ? "VisionGuard anomaly: Tooling friction wear on collet. Flagged for lab director review."
         : "Standard operational return. Clean signoff.",
+      returnPhotos: [returnPhoto],
     });
     onReturnComplete(booking.id);
     onClose();
@@ -76,10 +97,27 @@ export function ReturnAndInspectModal({ booking, isOpen, onClose, onReturnComple
 
         {/* Modal Body */}
         <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
-          {/* Instructions */}
-          <div className="flex items-center justify-between text-xs text-earthInk-muted">
+          {/* Instructions & Upload Trigger */}
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-earthInk-muted">
             <span>Drag the central divider to compare pre-use baseline against post-use return</span>
-            <span className="font-mono text-cobalt font-bold">Split: {Math.round(sliderPosition)}%</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-cobalt font-bold">Split: {Math.round(sliderPosition)}%</span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-cobalt/10 text-cobalt hover:bg-cobalt/20 border border-cobalt/25 transition-colors"
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Upload Return Photo</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleUploadPhoto}
+                className="hidden"
+              />
+            </div>
           </div>
 
           {/* Side-by-Side Diff Slider Container */}

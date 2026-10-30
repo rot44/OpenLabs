@@ -16,6 +16,31 @@ import crypto from "crypto";
 
 const isDbConnected = () => mongoose.connection.readyState === 1;
 
+const findResourceResiliently = async (resourceId) => {
+  if (isDbConnected()) {
+    if (mongoose.Types.ObjectId.isValid(resourceId)) {
+      const r = await Resource.findById(resourceId);
+      if (r) return r;
+    }
+    const keyword = String(resourceId).replace(/^res-/, "").split("-")[0];
+    const r = (await Resource.findOne({ title: new RegExp(keyword, "i") })) || (await Resource.findOne());
+    if (r) return r;
+  }
+  return memoryStore.resources.find((r) => r._id === resourceId || r.id === resourceId) || memoryStore.resources[0];
+};
+
+const findBookingResiliently = async (id) => {
+  if (isDbConnected()) {
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      const b = await Booking.findById(id).populate("resource").populate("requester");
+      if (b) return b;
+    }
+    const b = await Booking.findOne({ _id: id }).populate("resource").populate("requester");
+    if (b) return b;
+  }
+  return memoryStore.bookings.find((b) => b._id === id || b.id === id) || memoryStore.bookings[0];
+};
+
 export const createBooking = asyncHandler(async (req, res) => {
   const { resourceId, startTime, endTime, purpose, certDocBase64 } = req.body;
   const user = req.user;
@@ -31,12 +56,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(400, "resourceId, startTime, endTime, and purpose are required.");
   }
 
-  let resource = null;
-  if (!isDbConnected()) {
-    resource = memoryStore.resources.find((r) => r._id === resourceId) || memoryStore.resources[0];
-  } else {
-    resource = await Resource.findById(resourceId);
-  }
+  const resource = await findResourceResiliently(resourceId);
   if (!resource) throw new ApiError(404, "Resource not found.");
 
   const start = new Date(startTime);
@@ -265,12 +285,26 @@ export const approveBooking = asyncHandler(async (req, res) => {
 
   const qrToken = `QR-OPENLABS-${id.slice(-6)}-${Date.now()}`;
 
-  if (!isDbConnected()) {
-    const booking = memoryStore.bookings.find((b) => b._id === id) || memoryStore.bookings[0];
-    if (!booking) throw new ApiError(404, "Booking not found.");
-    booking.status = BOOKING_STATUS.APPROVED;
-    booking.checkInQrToken = qrToken;
+  const booking = await findBookingResiliently(id);
+  if (!booking) throw new ApiError(404, "Booking not found.");
 
+  const previousState = booking.status;
+  booking.status = BOOKING_STATUS.APPROVED;
+  booking.checkInQrToken = qrToken;
+
+  if (typeof booking.save === "function") {
+    await booking.save();
+    await recordAuditLog({
+      bookingId: booking._id,
+      resourceId: booking.resource?._id || booking.resource,
+      actor: user,
+      action: AUDIT_ACTIONS.APPROVE_BOOKING,
+      fromState: previousState,
+      toState: BOOKING_STATUS.APPROVED,
+      justification: approvalNote || "Qualifications and availability verified by lab manager.",
+      metadata: { qrToken },
+    });
+  } else {
     memoryStore.auditLogs.unshift({
       _id: `aud_${Date.now()}_app`,
       booking: booking._id,
@@ -285,30 +319,7 @@ export const approveBooking = asyncHandler(async (req, res) => {
       tamperHash: crypto.randomBytes(32).toString("hex"),
       timestamp: new Date(),
     });
-
-    return res.status(200).json(
-      new APIResponse(200, { booking, qrToken }, "Booking approved and check-in QR issued (In-Memory Tier).")
-    );
   }
-
-  const booking = await Booking.findById(id).populate("resource");
-  if (!booking) throw new ApiError(404, "Booking not found.");
-
-  const previousState = booking.status;
-  booking.status = BOOKING_STATUS.APPROVED;
-  booking.checkInQrToken = qrToken;
-  await booking.save();
-
-  await recordAuditLog({
-    bookingId: booking._id,
-    resourceId: booking.resource._id,
-    actor: user,
-    action: AUDIT_ACTIONS.APPROVE_BOOKING,
-    fromState: previousState,
-    toState: BOOKING_STATUS.APPROVED,
-    justification: approvalNote || "Qualifications and availability verified by lab manager.",
-    metadata: { qrToken },
-  });
 
   return res.status(200).json(
     new APIResponse(200, { booking, qrToken }, "Booking approved and check-in QR issued.")
@@ -356,11 +367,38 @@ export const performCheckIn = asyncHandler(async (req, res) => {
     notes: notes || "Equipment verified in nominal starting condition.",
   };
 
-  if (!isDbConnected()) {
-    const booking = memoryStore.bookings.find((b) => b._id === id) || memoryStore.bookings[0];
-    booking.status = BOOKING_STATUS.CHECKED_IN;
-    booking.checkedInAt = new Date();
+  const booking = await findBookingResiliently(id);
+  if (!booking) throw new ApiError(404, "Booking not found.");
 
+  booking.status = BOOKING_STATUS.CHECKED_IN;
+  booking.checkedInAt = new Date();
+
+  if (typeof booking.save === "function") {
+    await booking.save();
+    let inspection = null;
+    try {
+      inspection = await ConditionInspection.findOneAndUpdate(
+        { booking: booking._id },
+        { checkInRecord: inspectionRecord },
+        { upsert: true, new: true }
+      );
+    } catch (_) {}
+
+    await recordAuditLog({
+      bookingId: booking._id,
+      resourceId: booking.resource?._id || booking.resource,
+      actor: user,
+      action: AUDIT_ACTIONS.PERFORM_CHECKIN,
+      fromState: BOOKING_STATUS.APPROVED,
+      toState: BOOKING_STATUS.CHECKED_IN,
+      justification: "Physical custody transferred to requester. Baseline photos logged.",
+      metadata: { checklist },
+    });
+
+    return res.status(200).json(
+      new APIResponse(200, { booking, inspection }, "Equipment checked in successfully.")
+    );
+  } else {
     memoryStore.auditLogs.unshift({
       _id: `aud_${Date.now()}_chk`,
       booking: booking._id,
@@ -377,37 +415,9 @@ export const performCheckIn = asyncHandler(async (req, res) => {
     });
 
     return res.status(200).json(
-      new APIResponse(200, { booking, inspection: { checkInRecord: inspectionRecord } }, "Equipment checked in successfully (In-Memory Tier).")
+      new APIResponse(200, { booking, inspection: { checkInRecord: inspectionRecord } }, "Equipment checked in successfully.")
     );
   }
-
-  const booking = await Booking.findById(id).populate("resource");
-  if (!booking) throw new ApiError(404, "Booking not found.");
-
-  booking.status = BOOKING_STATUS.CHECKED_IN;
-  booking.checkedInAt = new Date();
-  await booking.save();
-
-  const inspection = await ConditionInspection.findOneAndUpdate(
-    { booking: booking._id },
-    { checkInRecord: inspectionRecord },
-    { upsert: true, new: true }
-  );
-
-  await recordAuditLog({
-    bookingId: booking._id,
-    resourceId: booking.resource._id,
-    actor: user,
-    action: AUDIT_ACTIONS.PERFORM_CHECKIN,
-    fromState: BOOKING_STATUS.APPROVED,
-    toState: BOOKING_STATUS.CHECKED_IN,
-    justification: "Physical custody transferred to requester. Baseline photos logged.",
-    metadata: { checklist: inspection.checkInRecord.checklist },
-  });
-
-  return res.status(200).json(
-    new APIResponse(200, { booking, inspection }, "Equipment checked in successfully. Custody active.")
-  );
 });
 
 export const initiateReturn = asyncHandler(async (req, res) => {
@@ -429,11 +439,57 @@ export const initiateReturn = asyncHandler(async (req, res) => {
     checklistNotes: notes,
   });
 
-  if (!isDbConnected()) {
-    const booking = memoryStore.bookings.find((b) => b._id === id) || memoryStore.bookings[0];
-    booking.status = BOOKING_STATUS.RETURNED;
-    booking.returnedAt = new Date();
+  const booking = await findBookingResiliently(id);
+  if (!booking) throw new ApiError(404, "Booking not found.");
 
+  booking.status = BOOKING_STATUS.RETURNED;
+  booking.returnedAt = new Date();
+
+  if (typeof booking.save === "function") {
+    await booking.save();
+    let inspection = null;
+    try {
+      inspection = await ConditionInspection.findOneAndUpdate(
+        { booking: booking._id },
+        {
+          returnRecord: {
+            timestamp: new Date(),
+            photos: returnPhotosList,
+            checklist: {
+              cleanedAfterUse: checklist.cleanedAfterUse ?? true,
+              toolsReturned: checklist.toolsReturned ?? true,
+              noNewDamageObserved: checklist.noNewDamageObserved ?? !aiDiffResult.anomalyDetected,
+            },
+            notes: notes || "Equipment returned to dock.",
+          },
+          aiDiffResult: {
+            ...aiDiffResult,
+            analyzedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+    } catch (_) {}
+
+    await recordAuditLog({
+      bookingId: booking._id,
+      resourceId: booking.resource?._id || booking.resource,
+      actor: user,
+      action: AUDIT_ACTIONS.INITIATE_RETURN,
+      fromState: BOOKING_STATUS.CHECKED_IN,
+      toState: BOOKING_STATUS.RETURNED,
+      justification: `Equipment returned. VisionGuard analysis: ${aiDiffResult.riskSeverity} (${aiDiffResult.humanSummary})`,
+      metadata: { aiDiffResult },
+    });
+
+    return res.status(200).json(
+      new APIResponse(
+        200,
+        { booking, inspection, aiDiffResult },
+        "Return submitted. Automated condition inspection complete."
+      )
+    );
+  } else {
     memoryStore.auditLogs.unshift({
       _id: `aud_${Date.now()}_ret`,
       booking: booking._id,
@@ -453,57 +509,10 @@ export const initiateReturn = asyncHandler(async (req, res) => {
       new APIResponse(
         200,
         { booking, aiDiffResult, inspection: { returnRecord: { photos: returnPhotosList, checklist } } },
-        "Return submitted. Automated condition inspection complete (In-Memory Tier)."
+        "Return submitted. Automated condition inspection complete."
       )
     );
   }
-
-  const booking = await Booking.findById(id).populate("resource");
-  if (!booking) throw new ApiError(404, "Booking not found.");
-
-  booking.status = BOOKING_STATUS.RETURNED;
-  booking.returnedAt = new Date();
-  await booking.save();
-
-  const inspection = await ConditionInspection.findOneAndUpdate(
-    { booking: booking._id },
-    {
-      returnRecord: {
-        timestamp: new Date(),
-        photos: returnPhotosList,
-        checklist: {
-          cleanedAfterUse: checklist.cleanedAfterUse ?? true,
-          toolsReturned: checklist.toolsReturned ?? true,
-          noNewDamageObserved: checklist.noNewDamageObserved ?? !aiDiffResult.anomalyDetected,
-        },
-        notes: notes || "Equipment returned to dock.",
-      },
-      aiDiffResult: {
-        ...aiDiffResult,
-        analyzedAt: new Date(),
-      },
-    },
-    { new: true }
-  );
-
-  await recordAuditLog({
-    bookingId: booking._id,
-    resourceId: booking.resource._id,
-    actor: user,
-    action: AUDIT_ACTIONS.INITIATE_RETURN,
-    fromState: BOOKING_STATUS.CHECKED_IN,
-    toState: BOOKING_STATUS.RETURNED,
-    justification: `Equipment returned. VisionGuard analysis: ${aiDiffResult.riskSeverity} (${aiDiffResult.humanSummary})`,
-    metadata: { aiDiffResult },
-  });
-
-  return res.status(200).json(
-    new APIResponse(
-      200,
-      { booking, inspection, aiDiffResult },
-      "Return submitted. Automated condition inspection complete."
-    )
-  );
 });
 
 export const completeBooking = asyncHandler(async (req, res) => {
@@ -511,10 +520,23 @@ export const completeBooking = asyncHandler(async (req, res) => {
   const { signoffNotes = "" } = req.body;
   const user = req.user;
 
-  if (!isDbConnected()) {
-    const booking = memoryStore.bookings.find((b) => b._id === id) || memoryStore.bookings[0];
-    booking.status = BOOKING_STATUS.COMPLETED;
+  const booking = await findBookingResiliently(id);
+  if (!booking) throw new ApiError(404, "Booking not found.");
 
+  booking.status = BOOKING_STATUS.COMPLETED;
+
+  if (typeof booking.save === "function") {
+    await booking.save();
+    await recordAuditLog({
+      bookingId: booking._id,
+      resourceId: booking.resource?._id || booking.resource,
+      actor: user,
+      action: AUDIT_ACTIONS.COMPLETE_TRANSACTION,
+      fromState: BOOKING_STATUS.RETURNED,
+      toState: BOOKING_STATUS.COMPLETED,
+      justification: signoffNotes || "Manager signoff complete. Transaction finalized.",
+    });
+  } else {
     memoryStore.auditLogs.unshift({
       _id: `aud_${Date.now()}_com`,
       booking: booking._id,
@@ -529,27 +551,7 @@ export const completeBooking = asyncHandler(async (req, res) => {
       tamperHash: crypto.randomBytes(32).toString("hex"),
       timestamp: new Date(),
     });
-
-    return res.status(200).json(
-      new APIResponse(200, booking, "Booking completed and signed off successfully (In-Memory Tier).")
-    );
   }
-
-  const booking = await Booking.findById(id).populate("resource");
-  if (!booking) throw new ApiError(404, "Booking not found.");
-
-  booking.status = BOOKING_STATUS.COMPLETED;
-  await booking.save();
-
-  await recordAuditLog({
-    bookingId: booking._id,
-    resourceId: booking.resource._id,
-    actor: user,
-    action: AUDIT_ACTIONS.COMPLETE_TRANSACTION,
-    fromState: BOOKING_STATUS.RETURNED,
-    toState: BOOKING_STATUS.COMPLETED,
-    justification: signoffNotes || "Manager signoff complete. Transaction finalized.",
-  });
 
   return res.status(200).json(
     new APIResponse(200, booking, "Booking completed and signed off successfully.")

@@ -931,12 +931,35 @@ export function AppProvider({ children }) {
     setTimeout(() => setBannerNotice(null), 3000);
   }, [activePersona, appendAuditLog]);
 
+  // Sync resources from live backend if available
+  useEffect(() => {
+    fetch("/api/v1/resources")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (Array.isArray(data?.data) && data.data.length > 0) {
+          setResources((prev) =>
+            prev.map((localR) => {
+              const matchedServer = data.data.find(
+                (sr) =>
+                  sr._id === localR.id ||
+                  sr.title?.toLowerCase().includes(localR.title?.split(" ")[0].toLowerCase())
+              );
+              return matchedServer
+                ? { ...localR, _id: matchedServer._id, serverId: matchedServer._id }
+                : localR;
+            })
+          );
+        }
+      })
+      .catch((e) => console.warn("Backend resources sync fallback:", e.message));
+  }, []);
+
   // Submit booking request
   const submitBooking = useCallback((resource, details) => {
     const newBookingId = `bkg-${Math.floor(200 + Math.random() * 800)}`;
     const newBooking = {
       id: newBookingId,
-      resourceId: resource.id,
+      resourceId: resource._id || resource.id,
       resourceTitle: resource.title,
       resourceCategory: resource.category,
       userId: activePersona.id,
@@ -949,7 +972,7 @@ export function AppProvider({ children }) {
       durationHours: details.durationHours || 3,
       status: "requested",
       safetyCertVerified: true,
-      certName: details.certName || resource.requiredQualifications[0] || "Standard Safety Clearance",
+      certName: details.certName || resource.requiredQualifications?.[0] || "Standard Safety Clearance",
       trustScanScore: 0.98,
       baselinePhotos: [],
       returnPhotos: [],
@@ -960,6 +983,40 @@ export function AppProvider({ children }) {
 
     setBookings((prev) => [newBooking, ...prev]);
     appendAuditLog("SUBMIT_REQUEST", `Booking ${newBookingId} (${resource.title})`, `Requested ${newBooking.durationHours}-hour slot for ${details.purpose || 'research'}.`);
+
+    // Async backend handshake (non-blocking, falls back gracefully to local ledger)
+    try {
+      const start = new Date();
+      start.setHours(start.getHours() + 2);
+      const end = new Date(start);
+      end.setHours(end.getHours() + (details.durationHours || 3));
+
+      fetch("/api/v1/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-persona": activePersona.role || "requester",
+        },
+        body: JSON.stringify({
+          resourceId: resource._id || resource.id,
+          startTime: start.toISOString(),
+          endTime: end.toISOString(),
+          purpose: details.purpose,
+          certDocBase64: details.certDocBase64 || null,
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.data?._id) {
+            setBookings((prev) =>
+              prev.map((b) => (b.id === newBookingId ? { ...b, serverId: data.data._id } : b))
+            );
+          }
+        })
+        .catch((err) => {
+          console.warn("Backend sync fallback to local store:", err.message);
+        });
+    } catch (_) {}
     
     // Also log automated AI credential validation
     setTimeout(() => {
@@ -992,11 +1049,35 @@ export function AppProvider({ children }) {
     );
     const targetBooking = bookings.find((b) => b.id === bookingId);
     appendAuditLog("APPROVE_BOOKING", `Booking ${bookingId}`, `Approved by Dr. Elena Vance. Within institutional quota limits.`);
+
+    try {
+      fetch(`/api/v1/bookings/${bookingId}/approve`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-persona": "owner",
+        },
+        body: JSON.stringify({ approvalNote: "Approved by Lab Director via OpenLabs Portal" }),
+      }).catch((e) => console.warn("Backend approve sync fallback:", e.message));
+    } catch (_) {}
   }, [bookings, appendAuditLog]);
 
   // Perform physical check-in (Alex Chen)
   const performCheckIn = useCallback((bookingId, checklistData = {}) => {
     const timestamp = new Date().toISOString();
+    const photos = checklistData.baselinePhotos || [
+      {
+        angle: "Pre-Use Bed & Spindle Surface",
+        url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80",
+        timestamp: "Verified Clean",
+      },
+      {
+        angle: "Tooling Assembly & Emergency Stop",
+        url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80",
+        timestamp: "Verified Safe",
+      },
+    ];
+
     setBookings((prev) =>
       prev.map((b) =>
         b.id === bookingId
@@ -1004,18 +1085,7 @@ export function AppProvider({ children }) {
               ...b,
               status: "checked_in",
               checkInTime: timestamp,
-              baselinePhotos: [
-                {
-                  angle: "Pre-Use Bed & Spindle Surface",
-                  url: "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80",
-                  timestamp: "Verified Clean",
-                },
-                {
-                  angle: "Tooling Assembly & Emergency Stop",
-                  url: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80",
-                  timestamp: "Verified Safe",
-                },
-              ],
+              baselinePhotos: photos,
             }
           : b
       )
@@ -1025,11 +1095,27 @@ export function AppProvider({ children }) {
       `Booking ${bookingId}`,
       `QR verified + 4-point safety checklist complete. Physical custody initiated.`
     );
+
+    try {
+      fetch(`/api/v1/bookings/${bookingId}/checkin`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-persona": "requester",
+        },
+        body: JSON.stringify({
+          checklist: checklistData.checklist || {},
+          baselinePhotos: photos.map((p) => (typeof p === "string" ? p : p.url)),
+        }),
+      }).catch((e) => console.warn("Backend checkin sync fallback:", e.message));
+    } catch (_) {}
   }, [appendAuditLog]);
 
   // Return equipment & run VisionGuard AI diff
   const returnEquipment = useCallback((bookingId, result = {}) => {
     const isDisputed = result.dispute || false;
+    const returnPhotos = result.returnPhotos || [];
+
     setBookings((prev) =>
       prev.map((b) =>
         b.id === bookingId
@@ -1038,6 +1124,7 @@ export function AppProvider({ children }) {
               status: isDisputed ? "disputed" : "returned",
               incidentReported: isDisputed,
               returnNotes: result.notes || "Standard post-use return.",
+              returnPhotos,
             }
           : b
       )
@@ -1062,6 +1149,20 @@ export function AppProvider({ children }) {
         );
       }, 500);
     }
+
+    try {
+      fetch(`/api/v1/bookings/${bookingId}/return`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-persona": "requester",
+        },
+        body: JSON.stringify({
+          returnPhotos,
+          notes: result.notes || "",
+        }),
+      }).catch((e) => console.warn("Backend return sync fallback:", e.message));
+    } catch (_) {}
   }, [appendAuditLog]);
 
   // Resolve Incident / Complete Booking (Elena Vance / Marcus Thorne)
@@ -1080,6 +1181,17 @@ export function AppProvider({ children }) {
         ? "Wear & tear waived under institutional educational usage protocol. Zero deposit withheld."
         : "Dispute reviewed and resolved with standard maintenance service order."
     );
+
+    try {
+      fetch(`/api/v1/bookings/${bookingId}/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-persona": "owner",
+        },
+        body: JSON.stringify({ signoffNotes: `Incident resolved: ${resolution}` }),
+      }).catch((e) => console.warn("Backend complete sync fallback:", e.message));
+    } catch (_) {}
   }, [appendAuditLog]);
 
   return (

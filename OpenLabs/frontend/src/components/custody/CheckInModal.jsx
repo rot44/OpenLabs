@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useApp } from "../../context/AppContext";
-import { X, QrCode, Camera, ShieldCheck, CheckSquare, Square, AlertCircle, ArrowRight } from "lucide-react";
+import { X, QrCode, Camera, ShieldCheck, CheckSquare, Square, AlertCircle, ArrowRight, UploadCloud, RefreshCw } from "lucide-react";
 
 export function CheckInModal({ booking, isOpen, onClose, onCheckInComplete }) {
   const { performCheckIn } = useApp();
@@ -12,10 +12,31 @@ export function CheckInModal({ booking, isOpen, onClose, onCheckInComplete }) {
     safetyEStop: true,
   });
 
+  const [angle1Photo, setAngle1Photo] = useState(
+    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80"
+  );
+  const [angle2Photo, setAngle2Photo] = useState(
+    "https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80"
+  );
+
+  const angle1InputRef = useRef(null);
+  const angle2InputRef = useRef(null);
+
   if (!isOpen || !booking) return null;
 
   const toggleCheck = (key) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const handleUploadPhoto = (e, setPhoto) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setPhoto(event.target.result);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const isChecklistComplete =
@@ -26,7 +47,13 @@ export function CheckInModal({ booking, isOpen, onClose, onCheckInComplete }) {
 
   const handleConfirm = () => {
     if (!isChecklistComplete) return;
-    performCheckIn(booking.id, checklist);
+    performCheckIn(booking.id, {
+      checklist,
+      baselinePhotos: [
+        { angle: "Overall Machine Bed & Enclosure", url: angle1Photo, timestamp: new Date().toISOString() },
+        { angle: "Spindle Collet & Tooling Bed", url: angle2Photo, timestamp: new Date().toISOString() },
+      ],
+    });
     onCheckInComplete(booking.id);
     onClose();
   };
@@ -94,29 +121,60 @@ export function CheckInModal({ booking, isOpen, onClose, onCheckInComplete }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl overflow-hidden bg-limestone-light border border-sandstone-border p-2 shadow-stone-sm">
+              <div className="rounded-2xl overflow-hidden bg-limestone-light border border-sandstone-border p-2 shadow-stone-sm group relative">
                 <div className="h-28 rounded-xl overflow-hidden relative">
                   <img
-                    src="https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800&auto=format&fit=crop&q=80"
+                    src={angle1Photo}
                     alt="Angle 1"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   />
-                  <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-earthInk/80 text-[10px] text-white font-mono">
-                    Angle 1: Enclosure & Bed
+                  <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-earthInk/80 text-[10px] text-white font-mono z-10">
+                    Angle 1: Bed & Enclosure
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => angle1InputRef.current?.click()}
+                    className="absolute inset-0 bg-earthInk/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-white text-xs font-semibold transition-opacity"
+                  >
+                    <UploadCloud className="w-5 h-5" />
+                    <span>Upload Angle 1</span>
+                  </button>
                 </div>
+                <input
+                  ref={angle1InputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleUploadPhoto(e, setAngle1Photo)}
+                  className="hidden"
+                />
               </div>
-              <div className="rounded-2xl overflow-hidden bg-limestone-light border border-sandstone-border p-2 shadow-stone-sm">
+
+              <div className="rounded-2xl overflow-hidden bg-limestone-light border border-sandstone-border p-2 shadow-stone-sm group relative">
                 <div className="h-28 rounded-xl overflow-hidden relative">
                   <img
-                    src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?w=800&auto=format&fit=crop&q=80"
+                    src={angle2Photo}
                     alt="Angle 2"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   />
-                  <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-earthInk/80 text-[10px] text-white font-mono">
-                    Angle 2: Spindle Collet & Chuck
+                  <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-earthInk/80 text-[10px] text-white font-mono z-10">
+                    Angle 2: Spindle Collet
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => angle2InputRef.current?.click()}
+                    className="absolute inset-0 bg-earthInk/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 text-white text-xs font-semibold transition-opacity"
+                  >
+                    <UploadCloud className="w-5 h-5" />
+                    <span>Upload Angle 2</span>
+                  </button>
                 </div>
+                <input
+                  ref={angle2InputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleUploadPhoto(e, setAngle2Photo)}
+                  className="hidden"
+                />
               </div>
             </div>
           </div>
