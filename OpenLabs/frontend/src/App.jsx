@@ -7,9 +7,18 @@ import { ManagerDashboard } from "./components/dashboard/ManagerDashboard";
 import { AuditAndFairnessView } from "./components/audit/AuditAndFairnessView";
 import { InstitutionalAccessGate } from "./components/common/InstitutionalAccessGate";
 import { AuthModal } from "./components/auth/AuthModal";
+import { VideoWalkthroughModal } from "./components/video/VideoWalkthroughModal";
 
 function MainContent() {
-  const { activeTab, bannerNotice, isAuthenticated, activePersona, authSession } = useApp();
+  const {
+    activeTab,
+    bannerNotice,
+    isAuthenticated,
+    activePersona,
+    authSession,
+    isVideoModalOpen,
+    closeVideoModal,
+  } = useApp();
 
   const isPendingClearance = authSession?.status === "pending_clearance";
 
@@ -87,6 +96,9 @@ function MainContent() {
 
       {/* Institutional SSO & Auth Modal */}
       <AuthModal />
+
+      {/* 3-Minute Interactive AI Video Walkthrough & Voiceover Demo */}
+      <VideoWalkthroughModal isOpen={isVideoModalOpen} onClose={closeVideoModal} />
 
       {/* Institutional Footer */}
       <footer className="border-t border-sandstone-border bg-limestone/60 px-4 py-6 text-center text-xs text-earthInk-muted">

@@ -450,6 +450,7 @@ export function AppProvider({ children }) {
   const [checkInModalBooking, setCheckInModalBooking] = useState(null);
   const [returnModalBooking, setReturnModalBooking] = useState(null);
   const [bannerNotice, setBannerNotice] = useState(null);
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
 
   const activePersona =
     registeredPersonas[activePersonaKey] ||
@@ -458,6 +459,8 @@ export function AppProvider({ children }) {
 
   const openAuthModal = useCallback(() => setIsAuthModalOpen(true), []);
   const closeAuthModal = useCallback(() => setIsAuthModalOpen(false), []);
+  const openVideoModal = useCallback(() => setIsVideoModalOpen(true), []);
+  const closeVideoModal = useCallback(() => setIsVideoModalOpen(false), []);
 
   // Helper to append tamper-evident SHA-256 hash log
   const appendAuditLog = useCallback((action, target, details, customActor = null, customRole = null) => {
@@ -1206,6 +1209,9 @@ export function AppProvider({ children }) {
         isAuthModalOpen,
         openAuthModal,
         closeAuthModal,
+        isVideoModalOpen,
+        openVideoModal,
+        closeVideoModal,
         loginWithEmail,
         loginWithGoogle,
         loginWithGooglePayload,
