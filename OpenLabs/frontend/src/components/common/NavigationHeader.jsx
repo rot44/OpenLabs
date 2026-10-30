@@ -15,9 +15,7 @@ import {
   LogIn,
   Building,
   GraduationCap,
-  Lock,
-  Sparkles,
-  Play
+  Lock
 } from "lucide-react";
 
 export function NavigationHeader() {
@@ -27,7 +25,6 @@ export function NavigationHeader() {
     activePersona,
     activePersonaKey,
     openAuthModal,
-    openVideoModal,
     isAuthenticated,
     authSession,
     switchPersona,
@@ -129,19 +126,8 @@ export function NavigationHeader() {
           })}
         </nav>
 
-        {/* Right: 3-Min Video Demo CTA & User Profile Menu */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          <button
-            id="btn-open-3min-video"
-            type="button"
-            onClick={openVideoModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-cobalt hover:bg-cobalt-hover shadow-md shadow-cobalt/25 transition-all hover:scale-[1.02] cursor-pointer"
-          >
-            <Sparkles className="w-3.5 h-3.5 animate-pulse text-amber-300" />
-            <span>🎬 3-Min AI Video Demo</span>
-          </button>
-
-          <div className="relative shrink-0 flex items-center gap-2" ref={dropdownRef}>
+        {/* Right: User Profile Menu or Sign In CTA */}
+        <div className="relative shrink-0 flex items-center gap-2" ref={dropdownRef}>
           {isAuthenticated ? (
             <div>
               {/* Trigger Button */}
@@ -380,8 +366,7 @@ export function NavigationHeader() {
           )}
         </div>
       </div>
-    </div>
-  </header>
+    </header>
   );
 }
 
