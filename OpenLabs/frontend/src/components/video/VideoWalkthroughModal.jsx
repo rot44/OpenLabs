@@ -280,12 +280,33 @@ export function VideoWalkthroughModal({ isOpen, onClose }) {
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-earthInk-muted hover:text-earthInk hover:bg-sandstone/60 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="/recorder.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/25 hover:bg-red-500/20 transition-all shadow-sm"
+              title="Open full-resolution 1080p canvas recorder & video exporter"
+            >
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span>Record & Export 1080p MP4/WebM</span>
+            </a>
+            <a
+              href="https://21st.dev/community/video/editor/ecf3d0ba-7d57-4ced-8593-26827097b125"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-sandstone/60 text-earthInk border border-sandstone-border hover:bg-sandstone transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>21st Cloud Studio</span>
+            </a>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl text-earthInk-muted hover:text-earthInk hover:bg-sandstone/60 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Video Stage Container (Main Screen) */}
@@ -526,3 +547,4 @@ export function VideoWalkthroughModal({ isOpen, onClose }) {
 }
 
 export default VideoWalkthroughModal;
+

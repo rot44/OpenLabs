@@ -4,6 +4,12 @@ import cookieParser from "cookie-parser";
 import compression from "compression";
 import helmet from "helmet";
 import morgan from "morgan";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import Route Handlers
 import authRouter from "./routes/auth.routes.js";
@@ -61,6 +67,25 @@ app.use("/api/v1/resources", resourceRouter);
 app.use("/api/v1/bookings", bookingRouter);
 app.use("/api/v1/audit", auditRouter);
 app.use("/api/v1/analytics", analyticsRouter);
+
+// Video Export direct-to-disk endpoint
+app.post("/api/v1/video/save", express.raw({ type: "*/*", limit: "150mb" }), (req, res) => {
+  try {
+    const projectRoot = path.resolve(__dirname, "../../..");
+    const targetFile = path.join(projectRoot, "OpenLabs_Hackathon_Demo_3Min.webm");
+    fs.writeFileSync(targetFile, req.body);
+    console.log(`[Video Export] Successfully saved video to: ${targetFile} (${(req.body.length / 1024 / 1024).toFixed(2)} MB)`);
+    return res.status(200).json({
+      success: true,
+      message: "Video saved successfully to project root",
+      filePath: targetFile,
+      bytes: req.body.length,
+    });
+  } catch (err) {
+    console.error("[Video Export] Failed to save video:", err);
+    return res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // 9. Centralized Error Handling Middleware (must be after all routes)
 app.use(errorHandler);

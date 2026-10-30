@@ -117,3 +117,4 @@ Crisis    Personas  TrustScan Director  Custody   VisionDiff Audit Log
 1. **In-App Interactive Video Theatre:** Click the **"🎬 3-Min AI Video Demo"** button on the top right navigation header.
 2. **Audio Track Download:** Judges can download the master voiceover directly (`openlabs_master_voiceover.m4a`) or individual chapter tracks from the theatre player.
 3. **Interactive Sync:** Scrubbing the timeline or clicking any chapter jumps the presentation, subtitles, and voiceover in real time.
+
